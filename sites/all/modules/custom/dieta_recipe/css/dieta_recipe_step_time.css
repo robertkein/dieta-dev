@@ -1,0 +1,13 @@
+.node-dieta_recipe-form .field-name-field-recipe-steps .field-name-field-recipe-step-time, 
+.node-dieta_recipe-form .field-name-field-recipe-steps .field-name-field-recipe-step-time2 {
+  /*display: none;*/
+}
+
+.node-dieta_recipe-form .field-name-field-recipe-steps .field-recipe-step-falsh-time-type img {
+  width: 15px;
+  height: 16px;
+}
+
+.node-dieta_recipe-form .field-name-field-recipe-steps .field-recipe-step-falsh-time-type input[type="radio"] {
+  vertical-align: top;
+}

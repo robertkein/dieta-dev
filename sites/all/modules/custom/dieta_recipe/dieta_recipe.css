@@ -1,0 +1,106 @@
+
+
+
+.dieta-recipe-section div.section {
+  margin: 0;
+  padding: 0 0 0 1.5em;
+}
+
+.dieta-recipe-ingredients {
+  padding-left: 7em;
+  text-indent: -7em;
+}
+
+.dieta-recipe-ingredients .quantity-unit {
+  float: left;
+  width: 7em;
+}
+
+
+/*
+ * import preview
+ */
+.dieta-recipe-error-item {
+  margin-left: 10px;
+  color:red;
+  font-weight:bold;
+}
+.dieta-recipe-new-item {
+  margin-left: 10px;
+  color:#2E8B57;
+  font-weight:bold;
+}
+.dieta-recipe-matched-item {
+  margin-left: 10px;
+}
+
+/* recent index page */
+.dieta_recipe_index_list {
+  float: left;
+  width: 58%;
+}
+.dieta_recipe_index_recent {
+  float: left;
+  width: 40%;
+}
+
+
+.dieta-recipe-import-text {
+  font-family: monospace;
+}
+
+/*
+ * Summary Box
+ */
+.dieta-recipe-summary {
+  float: right;
+  width: 20em;
+  margin:0; padding:0;
+  font-size: 1.0em;
+}
+/* If summary is in block, remove float and width so that it won't blowup the layout. */
+.block-dieta-recipe .dieta-recipe-summary {
+  float:none;
+  width:100%;
+}
+.dieta-recipe-summary table {
+  border-collapse: collapse;
+}
+.dieta-recipe-summary td,
+.dieta-recipe-summary th {
+  border: 1px solid #aaa;
+  padding: .2em;
+}
+.dieta-recipe-summary th {
+  background: #E0E0E0;
+  color: black;
+  font-weight: bold;
+  width: 4em;
+}
+.dieta-recipe-summary td {
+  background: white;
+  color: black;
+}
+.dieta-recipe-summary .form-item {
+  display: inline;
+}
+.summary-data, .summary-title {
+  width: 10em;
+}
+.dieta-recipe-summary p {
+  margin:0; padding:0;
+}
+.dieta-recipe-summary h2 {
+  margin:0; padding:0;
+}
+.dieta-recipe-summary .form-submit {
+  font-size: 75%;
+  width: 8em;
+  float:right;
+}
+#dieta_recipe_custom_yield fieldset {
+  border: none;
+}
+#dieta_recipe_custom_yield fieldset .form-item {
+  display: inline;
+}

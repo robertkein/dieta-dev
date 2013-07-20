@@ -1,0 +1,19 @@
+name = Fivestar Recommender
+description = Recommend nodes based on fivestar voting.
+package = Recommendation
+
+dependencies[] = recommender
+dependencies[] = views
+dependencies[] = fivestar
+
+files[] = fivestar_rec.module
+files[] = fivestar_rec.views_default.inc
+
+core = 7.x
+
+; Information added by drupal.org packaging script on 2011-09-20
+version = "7.x-3.0-alpha4"
+core = "7.x"
+project = "fivestar_rec"
+datestamp = "1316533903"
+

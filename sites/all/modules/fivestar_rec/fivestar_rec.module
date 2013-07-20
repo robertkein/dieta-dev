@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * @see http://drupal.org/project/fivestar_rec
+ */
+
+/**
+ * Implements hook_help().
+ */
+function fivestar_rec_help($path, $args) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#fivestar_rec":
+      $output = '<p>'.  t("This module generates node recommendations based on Fivestar voting") .'</p>';
+      break;
+  }
+  return $output;
+}
+
+
+/**
+ * Implements hook_views_api().
+ */
+function fivestar_rec_views_api() {
+  return array(
+    'api' => 3,
+  );
+}

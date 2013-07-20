@@ -1,0 +1,392 @@
+<?php
+
+function custom_recipe_menu() {
+  // содержимое вкладки "комментарии"
+    $items['node/%node/comments'] = array(
+       'title' => 'Комментарии',
+       'page callback' => 'custom_recipe_comments',
+       'page arguments' => array(1, 3),
+       'access callback' => 'custom_recipe_check_permission',
+       'access arguments' => array(1),
+       'type' => MENU_LOCAL_TASK,
+       'weight' => 10,    
+   );
+
+    // содержимое вкладки "мои заметки"
+   $items['node/%node/notes'] = array(
+       'title' => 'Мои заметки',
+       'page callback' => 'custom_recipe_notes',
+       'page arguments' => array(1, 3),
+       'access callback' => 'custom_recipe_check_permission',
+       'access arguments' => array(1),
+       'type' => MENU_LOCAL_TASK,
+       'weight' => 12,    
+   );
+
+   // содержимое вкладки описания рецепта
+   $items['node/%node/view_tab'] = array(
+       'title' => 'Рецепт',
+       'page callback' => 'custom_recipe_node_view_tab',
+       'page arguments' => array(1),
+       'access callback' => 'custom_recipe_check_permission',
+       'access arguments' => array(1),  
+   );
+
+   // редактирование заметки
+   $items['note/edit/%node'] = array(
+       'page callback' => 'custom_recipe_note_edit',
+       'page arguments' => array(2),
+       'access callback' => TRUE,
+       'type' => MENU_CALLBACK,
+   );
+
+   // сохранение нового текста заметки
+   $items['note/save/%node'] = array(
+       'page callback' => 'custom_recipe_note_save',
+       'page arguments' => array(2),
+       'access callback' => TRUE,
+       'type' => MENU_CALLBACK,  
+   );
+
+   // удаление текста заметки
+   $items['note/delete/%node'] = array(
+       'page callback' => 'custom_recipe_note_delete',
+       'page arguments' => array(2),
+       'access callback' => TRUE,
+       'type' => MENU_CALLBACK,  
+   );
+
+   // получение яксом свойств термина из словаря "продукты"
+   $items['custom_recipe/get_new_nutritional_and_price'] = array(
+       'page callback' => 'custom_recipe_get_new_nutritional_and_price',
+//       'page arguments' => array(2),
+       'access callback' => TRUE,
+       'type' => MENU_CALLBACK,  
+   );
+
+    return $items;
+}
+
+/*
+ * Функция permission callback
+ */
+function custom_recipe_check_permission($node) {
+  return ($node->type == 'dieta_recipe');
+}
+
+/*
+ * Callback функция для пункта меню
+ * Возвращает аяксом содержимое вкладки с комментариями
+ */
+function custom_recipe_comments($node, $ajax = NULL){
+   $comments = comment_node_page_additions($node);
+   $comments_rendered = drupal_render($comments);
+   
+   if ($ajax == 'ajax') {
+     return drupal_json_output($comments_rendered);
+   }
+   else {
+     return $comments_rendered;
+   }
+}
+
+/**
+ * Callback функция пункта меню node/%node/notes
+ * @global object $user
+ * @param object $node
+ * @param string $ajax
+ * @return string
+ */
+function custom_recipe_notes($node, $ajax = NULL){
+  GLOBAL $user;
+  $view = views_get_view('my_notes');
+  $view->set_arguments(array($user->uid, $node->nid));
+  $view->set_display('block');
+  $view->execute();
+  // если у пользователя для данного рецепта еще нет заметки, то создаем ее пустую программно
+  if (empty($view->total_rows)) {
+    $node_note = new stdClass();
+    $node_note->uid  = $user->uid;
+    $node_note->type = 'note';
+    $node_note->name = (isset($user->name) ? $user->name : '');
+    $node_note->language = LANGUAGE_NONE;
+    node_object_prepare($node_note);
+    $node_note->title = custom_recipe_generate_note_tite();
+    $node_note->field_ref_recipe['und'][0]['nid'] = $node->nid;
+    $node_note = node_submit($node_note);
+    node_save($node_note);
+  }
+  else { 
+    $node_note = node_load($view->result[0]->nid);
+  }
+  
+  if (user_access('create note content')) {
+    $form = drupal_get_form('custom_recipe_NOTE_FORM', $node_note);
+    $output = drupal_render($form);
+  }
+  else {
+    $output .= '<p>Чтобы добавлять заметки, вы должны <a href="/user">войти</a> или <a href="/user/register">зарегистрироваться</a>.</p>';
+  }  
+  
+  if ($ajax == 'ajax') {
+     return drupal_json_output($output);
+  }
+  else {
+     return $output;
+  }
+}
+
+/*
+ * Возвращает сгенерированный заголовок для заметки
+ */
+function custom_recipe_generate_note_tite() {
+  GLOBAL $user;
+  return date('d.m.Y') . ' Заметка к рецепту пользователя' . $user->name;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function custom_recipe_form_NOTE_NODE_FORM_alter(&$form, &$form_state) {
+  $form['title']['#default_value'] = custom_recipe_generate_note_tite();
+  $form['title']['#access']            = FALSE;
+}
+
+/*
+ * Возвращает кастомную (не является модернизацией штатной формы создания ноды) форму для редактирования заметки
+ */
+function custom_recipe_NOTE_FORM($form, &$form_state, $node_note) {
+  if (is_numeric($node_note)) {
+    $node_note = node_load($node_note);
+  }
+  
+  if (isset($node_note->body[LANGUAGE_NONE][0]['value']) && !empty($node_note->body[LANGUAGE_NONE][0]['value'])) {
+    $note_text = $node_note->body[LANGUAGE_NONE][0]['value'];
+    $form_class = 'only-text';    
+  }
+  else {
+    $note_text = '';
+    $form_class = 'only-form';
+  }
+  if (is_object($node_note)) {
+    $note_actions = custom_recipe_get_buttons_action_note($node_note);
+  }
+  
+  $form['#attributes']['class'][] = $form_class;
+  
+  $form['note_text'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div id="note-text-wrapper">',
+    '#markup' => '<div id="note">'.$note_text.'</div>' . $note_actions,
+    '#suffix' => '</div>',
+  );
+  
+  $form['note_nid'] = array(
+    '#type'  => 'hidden',
+    '#value' => $node_note->nid,
+  );
+  
+  $form['note_body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Note'),
+    '#default_value' => $note_text,
+    '#required'      => FALSE,
+    '#rows'          => 3,
+  );
+  
+  $form['submit_link'] = array(
+    '#type' => 'markup',
+    '#markup' => '<a href="note/save/'.$node_note->nid.'" class="form-submit">'.t('Save').'</a>'
+  );
+  
+  return $form;
+}
+
+/*
+ * Возвращает html-код кнопок действий над заметкой
+ */
+function custom_recipe_get_buttons_action_note($node_note) {
+  return '<div class="note-actions"><a href="note/edit/'.$node_note->nid.'" class="note-edit">изменить</a> | <a href="note/delete/'.$node_note->nid.'"  class="note-delete">удалить</a></div>';
+}
+
+/*
+ * Callback функция для пункта меню
+ * Выводит аяксом содержимое вкладки с описанием рецепта
+ */
+function custom_recipe_node_view_tab($node) {
+  $node_view = node_view($node);
+  $node_rendered = drupal_render($node_view);
+  
+  return drupal_json_output($node_rendered);
+}
+
+/*
+ * Implements hook_preprocess_HOOK().
+ */
+function custom_recipe_preprocess_node(&$vars) {
+  $node = $vars['node'];
+  if ($node->type == 'dieta_recipe') {
+    $module_path = drupal_get_path('module', 'custom_recipe');
+    drupal_add_js($module_path . '/js/recipe_ajax_tabs.js');  
+    drupal_add_js($module_path . '/js/recipe_note_tab.js');
+    drupal_add_css($module_path . '/css/note_form.css');
+  }
+}
+
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ * 
+ * @param $data
+ *   An associative array containing:
+ *   - actions: An associative array containing:
+ *     - count: The amount of actions determined by the menu system, which can
+ *       be ignored.
+ *     - output: A list of of actions, each one being an associative array
+ *       as described above.
+ *   - tabs: An indexed array (list) of tab levels (up to 2 levels), each
+ *     containing an associative array:
+ *     - count: The amount of tabs determined by the menu system. This value
+ *       does not need to be altered if there is more than one tab.
+ *     - output: A list of of tabs, each one being an associative array as
+ *       described above.
+ * @param $router_item
+ *   The menu system router item of the page.
+ * @param $root_path
+ *   The path to the root item for this set of tabs.
+ */
+function custom_recipe_menu_local_tasks_alter(&$data, $router_item, $root_path){
+  // добавляем классы для некоторых вкладок рецепта, чтобы они открывались аяксом
+  if (isset($router_item['page_arguments'][0]->type)) {
+    if ($router_item['page_arguments'][0]->type == 'dieta_recipe') {
+        $tabs = $data['tabs'][0]['output'];
+        if (!empty($tabs)) {
+            foreach ($tabs as $i => $tab) {
+                $tab_link = &$data['tabs'][0]['output'][$i]['#link'];
+                switch ($tab_link['path']) {
+                    case 'node/%/view':
+                        $tab_link['localized_options']['attributes']['class'][] = 'ajax';
+                        $tab_link['localized_options']['attributes']['class'][] = 'tab-view_tab';
+                        $tab_link['title'] = 'Рецепт';
+                        break;
+                    case 'node/%/comments':
+                        $tab_link['localized_options']['attributes']['class'][] = 'ajax';
+                        $tab_link['localized_options']['attributes']['class'][] = 'tab-comments';
+                        break;
+                    case 'node/%/notes':
+                        $tab_link['localized_options']['attributes']['class'][] = 'ajax';
+                        $tab_link['localized_options']['attributes']['class'][] = 'tab-notes';
+                        break;
+                }
+            }
+        }
+    }
+  }
+}
+
+/*
+ * Callback функция для пукта меню.
+ * Выводит аяксом форму для редактирования заметки
+ */
+function custom_recipe_note_edit($node) {
+  $form = drupal_get_form($node->type . '_node_form');
+  $form_rendered = drupal_render($form);
+  return drupal_json_output($form_rendered);
+}
+
+/*
+ * Callback функция для пукта меню.
+ * Сохраняет полученный текст в заметке
+ */
+function custom_recipe_note_save($node) {
+  $node->body[LANGUAGE_NONE][0]['value'] = $_POST['note_body'];
+  node_save($node);
+  return drupal_json_output($node->body[LANGUAGE_NONE][0]['value']);
+}
+
+/*
+ * Callback функция для пукта меню.
+ * Очищает содержимое заметки
+ */
+function custom_recipe_note_delete($node) {
+  $node->body[LANGUAGE_NONE][0]['value'] = '';
+  node_save($node);
+  return drupal_json_output('removed');
+}
+
+function custom_recipe_get_new_nutritional_and_price() {
+//  if (empty($_POST)) {
+//    return;
+//  }
+  $portions = $_POST['portions'];
+  $new_params = array(
+    'caloric_effect'  => 0,
+    'carbohydrates'   => 0,
+    'fats'            => 0,
+    'proteins'        => 0,
+    'price'           => 0,
+  );
+  $ings = drupal_json_decode($_POST['ings']);
+  $units = dieta_recipe_get_units(); 
+  $unit_weights = array();
+  foreach ($units as $unit) {
+    $unit_weights[$unit->unit_key] = (int)$unit->weight;
+  }
+  foreach ($ings as $ing) {
+//    $terms = taxonomy_get_term_by_name($ing['name'], 'products');
+//    $term = array_shift($terms);
+    $ingredient_id = dieta_recipe_ingredient_id_from_name($ing['name']);
+    $term = taxonomy_term_load($ingredient_id);
+    if ($term) {    
+//      $ing['quantity'] = round(dieta_recipe_ingredient_quantity_from_fraction($ing['quantity']), 6);
+      $unit_weight = $unit_weights[$ing['unit']];
+      if (!isset($term->field_caloric_effect['und'][0]['value'])) {
+        $term->field_caloric_effect['und'][0]['value'] = 0;
+      }
+      if (!isset($term->field_carbohydrates['und'][0]['value'])) {
+        $term->field_carbohydrates['und'][0]['value'] = 0;
+      }
+      if (!isset($term->field_fats['und'][0]['value'])) {
+        $term->field_fats['und'][0]['value'] = 0;
+      }
+      if (!isset($term->field_proteins['und'][0]['value'])) {
+        $term->field_proteins['und'][0]['value'] = 0;
+      }
+      if (!isset($term->field_product_price['und'][0]['value'])) {
+        $term->field_product_price['und'][0]['value'] = 0;
+      }
+      $new_params['caloric_effect'] += ($term->field_caloric_effect['und'][0]['value'] * $ing['quantity'] * $unit_weight) / 100;
+      $new_params['carbohydrates']  += ($term->field_carbohydrates['und'][0]['value']  * $ing['quantity'] * $unit_weight) / 100;
+      $new_params['fats']           += ($term->field_fats['und'][0]['value']           * $ing['quantity'] * $unit_weight) / 100;
+      $new_params['proteins']       += ($term->field_proteins['und'][0]['value']       * $ing['quantity'] * $unit_weight) / 100;
+      $new_params['price']          += ($term->field_product_price['und'][0]['value']  * $ing['quantity'] * $unit_weight * $portions) / 100;
+      
+      //$log .= $ing['name'].' tid_'.$term->tid.' quantity='.$ing['quantity'].' field_caloric_effect='.$term->field_caloric_effect['und'][0]['value'].' w='.$unit_weight. ' new_value=' . $new_params['caloric_effect'] .'; ';      
+    }    
+  }
+  foreach ($new_params as $name => $value) {
+    if ($name == 'price') {
+      $new_params[$name] = round($value, 2);
+    }
+    else {
+      $new_params[$name] = round($value, 0);
+    }
+  }
+  //watchdog('custom_recipe_get_new_nutritional_and_price', $log);
+  drupal_json_output($new_params);  
+}
+
+/*
+ * Implements hook_form_FORM_ID_alter().
+ */
+function custom_recipe_form_DIETA_RECIPE_NODE_FORM_alter(&$form, &$form_state) {
+  $form['#after_build'][] = 'custom_recipe_form_DIETA_RECIPE_NODE_FORM_after_build';
+}
+
+function custom_recipe_form_DIETA_RECIPE_NODE_FORM_after_build($form, &$form_state) {
+  $module_path = drupal_get_path('module', 'custom_recipe');
+  drupal_add_js($module_path . '/js/recipe_form_nutritional_block.js');
+  $form['#attached']['js'][] = $module_path . '/js/recipe_form_time_field.js';
+  
+  return $form;
+}

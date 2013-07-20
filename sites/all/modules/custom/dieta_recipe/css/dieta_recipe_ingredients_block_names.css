@@ -1,0 +1,74 @@
+/* 
+   темизация блока "dieta_recipe_ingredients_block_names"
+*/
+
+.dieta-recipe-ingredients-block-names {
+  display: none;
+  position: absolute;
+  z-index: 1000;
+  background-color: white;
+  padding: 3px;
+  border: 1px solid black;
+}
+
+.dieta-recipe-ingredients-block-names table td {
+  vertical-align: top;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.dieta-recipe-ingredients-block-names table ul {
+  max-height: 400px;
+  padding: 0;
+  list-style: none;
+  margin: 0;
+}
+
+.dieta-recipe-ingredients-block-names td.categories li, 
+.dieta-recipe-ingredients-block-names td.products li {
+  padding-right: 5px;
+  padding-left: 5px;
+  cursor: pointer;
+}
+
+.dieta-recipe-ingredients-block-names li:hover {
+  text-decoration: underline;
+}
+
+.dieta-recipe-ingredients-block-names li.active {
+  font-weight: bold;
+  background-color: #E0E0E0;
+}
+
+.dieta-recipe-ingredients-block-names td.products {
+  background-color: #E0E0E0;
+}
+
+.dieta-recipe-ingredients-block-names .close-wrapper {
+  overflow: hidden;
+}
+
+.dieta-recipe-ingredients-block-names .close {
+  float: right;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dieta-recipe-ingredients-block-names .form-add-product {
+  padding-left: 5px; 
+  margin-top: 15px;
+}
+
+.dieta-recipe-ingredients-block-names .form-submit {
+  cursor: pointer;
+  text-decoration: underline;
+  /*display: none;*/
+}
+
+.dieta-recipe-ingredients-block-names .add-product .label {
+  font-weight: bold;
+}
+
+.dieta-recipe-ingredients-block-names .count {
+  color: #666;
+}

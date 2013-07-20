@@ -1,0 +1,188 @@
+<?php
+
+/*
+ * Implements hook_pathauto_alias_alter().
+ */
+//function custom_aliases_pathauto_alias_alter(&$alias, &$context) {
+//  dsm($context);
+//  drupal_set_message($alias);
+//  watchdog('custom_aliases', 'custom_aliases_pathauto_alias_alter, ' . $alias);
+////  switch ($context[''])
+//}
+
+function custom_aliases_pathauto_alias_alter(&$alias, &$context) {
+//  dsm($context);
+//  dsm($alias);
+  if ($context['module'] == 'taxonomy_term' && $context['type'] == 'products') {
+    // определяем уровень иеррархии текущего термина таксономии словаря "продукты"
+    $term = array_shift($context['data']);
+    $term_depth = custom_aliases_get_term_depth($term->tid);
+    $path = drupal_get_path('module', 'pathauto');
+    include_once $path . '/pathauto.inc'; 
+    // данный словарь "продукты" отличается тем, что у него есть коренной термин "продукты", из которого уже ветвяться все термины категорий продуктов и продуктов
+    // поэтому "реальная" иеррархия начинается с 2
+    if ($term_depth == 3) {
+//      // узнаем имя родительского термина
+//      $parents = taxonomy_get_parents($term->tid);
+//      $parent = array_shift($parents);
+//      $parent_name_for_alias = pathauto_cleanstring($parent->name);
+//      $alias = 'wiki/' . $parent_name_for_alias . '/' . pathauto_cleanstring($term->name);
+
+	//Выключаю - нам не нужен в данной ситуации алиас - для 3 уровня устанавливаются вьюзы.
+	//Grahor
+	
+	/*
+      $alias = custom_aliases_get_product_term_alias($term);
+      drupal_set_message('Алиас был сгенерирован модулем custom_aliases. Новый алиас: ' . $alias);
+	*/
+    }
+    elseif ($term_depth == 2) {
+      custom_aliases_set_aliase_for_views_ingredients_in_category($term);      
+    }
+  }
+//  
+//  $arg0 = arg(0);
+//  $arg1 = arg(1);
+//  $arg2 = arg(2);
+//  // для страниц вьюса ingredients_in_category 
+//  if ($arg0 == 'wiki' && $arg1 == 'ingredients' && is_numeric($arg2)) {
+//    // определяем уровень иеррархии текущего термина таксономии словаря "продукты"
+//    $tid = $arg2;
+//    if ($term = taxonomy_term_load($tid)) {
+//      $term_depth = custom_aliases_get_term_depth($term->tid);
+//      $path = drupal_get_path('module', 'pathauto');
+//      include_once $path . '/pathauto.inc'; 
+//      // данный словарь "продукты" отличается тем, что у него есть коренной термин "продукты", из которого уже ветвяться все термины категорий продуктов и продуктов
+//      // поэтому "реальная" иеррархия начинается с 2
+//      if ($term_depth == 2) {
+//        $alias = 'wiki/' . pathauto_cleanstring($term->name);
+//      }
+//    }
+//  }
+}
+
+/**
+ * Возвращает алиас для термина словаря "продукты" для низших уровней иеррархии
+ * (для непосредственно продуктов, а не категорий, которые являются родительскими для продуктов терминами)
+ * @param object or int $term - либо объект термина, либо его tid
+ */
+function custom_aliases_get_product_term_alias($term) {
+  if (is_numeric($term)) {
+    if (!$term = taxonomy_term_load($term)) {
+      watchdog('custom_aliases', 'Функция "custom_aliases_set_product_term_alias". Получен не верный параметр $term, который является числом, но не является tid термина');
+      return NULL;
+    }
+  }
+  
+  // узнаем имя родительского термина
+  $parents = taxonomy_get_parents($term->tid);
+  $parent = array_shift($parents);
+  $path = drupal_get_path('module', 'pathauto');
+  include_once $path . '/pathauto.inc'; 
+  $parent_name_for_alias = pathauto_cleanstring($parent->name);
+  $alias = 'wiki/' . $parent_name_for_alias . '/' . pathauto_cleanstring($term->name);  
+  return $alias;
+}
+
+function custom_aliases_set_aliase_for_views_ingredients_in_category($term) {
+  if (is_numeric($term)) {
+    if (!$term = taxonomy_term_load($term)) {
+      watchdog('custom_aliases', 'Функция "custom_aliases_set_aliase_for_views_ingredients_in_category". Получен не верный параметр $term, который является числом, но не является tid термина');
+      return NULL;
+    }
+  }
+  
+  $path = drupal_get_path('module', 'pathauto');
+  include_once $path . '/pathauto.inc'; 
+  $new_alias = 'wiki/' . pathauto_cleanstring($term->name);
+  $view = views_get_view('ingredients_in_category');
+  $views_path = $view->display['page']->display_options['path'];
+  $source = str_replace('%', $term->tid, $views_path);
+  custom_aliases_change_alias($source, $new_alias);
+  _pathauto_set_alias(array("alias"=>$path), array("alias"=>$new_alias));
+  // обновляем алиасы для всех адресов с фильтром по букве
+  $chars = array('А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 
+  'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я');
+  foreach ($chars as $char) {
+    custom_aliases_change_alias($source.'/'.$char,  $new_alias.'/'.$char);    
+  }
+}
+
+function custom_aliases_get_term_depth($tid) {
+  $limit = 99;
+  $depth = 1;
+  while($parent = db_query('SELECT parent FROM {taxonomy_term_hierarchy} WHERE tid = '.(int)$tid)->fetchField())
+  {
+    $depth++;
+    $tid = $parent;
+    if($depth > $limit) break;
+  }
+  
+  return $depth;
+}
+
+//function custom_aliases_views_pre_render(&$view) {
+//  switch ($view->name) {
+//    case 'ingredients_in_category':
+//          switch ($view->current_display) {
+//            case  'page':
+//              $path = drupal_get_path('module', 'pathauto');
+//              include_once $path . '/pathauto.inc'; 
+//              $source = $_GET['q'];
+////              $existing_aliases = db_query_range("SELECT * FROM {url_alias} 
+////                  WHERE source = :source AND language IN (:language, :language_none) ORDER BY language DESC, pid DESC", 
+////                  0, 1, array(':source' => $source, ':language' => LANGUAGE_NONE, ':language_none' => LANGUAGE_NONE))->fetchAll();
+//// 
+////              dsm($existing_aliases);
+//              $new_alias = '';
+//              dsm($view->display['page']->display_options['path']);
+//              $tid = $view->args[0];
+//              if ($term = taxonomy_term_load($tid)) {
+//                $term_depth = custom_aliases_get_term_depth($term->tid);
+//                $path = drupal_get_path('module', 'pathauto');
+//                include_once $path . '/pathauto.inc'; 
+//                // данный словарь "продукты" отличается тем, что у него есть коренной термин "продукты", из которого уже ветвяться все термины категорий продуктов и продуктов
+//                // поэтому "реальная" иеррархия начинается с 2
+//                if ($term_depth == 2) {
+//                  $new_alias = 'wiki/' . pathauto_cleanstring($term->name);
+//                }
+//              }
+////              custom_aliases_change_alias($source, $new_alias);
+//              break;
+//          }
+//          break;
+//  }
+//}
+//
+//function custom_aliases_preprocess_html(&$vars) {
+//  $path = drupal_get_path('module', 'pathauto');
+//  include_once $path . '/pathauto.inc'; 
+//  dsm($_GET['q']);
+//  $source = $_GET['q'];
+//  $existing_aliases = db_query_range("SELECT * FROM {url_alias} WHERE source = :source AND language IN (:language, :language_none) ORDER BY language DESC, pid DESC", 0, 1, array(':source' => $source, ':language' => 'RU', ':language_none' => LANGUAGE_NONE))->fetchAll();
+// 
+//  dsm($existing_aliases);
+//}
+
+function custom_aliases_change_alias($source, $new_alias) {
+  $old_alias = drupal_get_path_alias($source);
+  if (empty($old_alias) || $old_alias == $source) {
+    $q = db_insert('url_alias')
+    ->fields(
+        array(
+          'alias' => $new_alias,
+          'source' => $source,
+          'language' => LANGUAGE_NONE,
+        )
+    )
+    ->execute();
+  }
+  else {
+    $q = db_update('url_alias')
+    ->fields( array('alias' => $new_alias) )
+    ->condition('source', $source)
+    ->condition('alias', $old_alias)
+    ->execute();
+  }
+}
+

@@ -1,0 +1,532 @@
+/*
+CSS Recipe
+
+author: kirmaster
+22.05.2013
+*/
+
+/*.node-type-dieta-recipe .information_recipe .second-row*/
+
+.node-type-dieta-recipe .category_recipe{
+     padding-bottom: 10px;
+}
+
+.node-type-dieta-recipe .category_linlk{
+	text-transform: lowercase;
+}
+
+.node-type-dieta-recipe .information_recipe{
+	padding: 5px 0;
+}
+
+.node-type-dieta-recipe #page-title{
+	padding-bottom: 0;
+	margin-bottom: 0
+}
+
+
+.node-type-dieta-recipe .date_header_recipe{
+	background: url('../images/date_header.png') no-repeat center left;
+}
+
+.node-type-dieta-recipe .author_header_recipe{
+	background: url('../images/author_header.png') no-repeat center left;
+}
+
+.node-type-dieta-recipe .comment_header_recipe{
+	background: url('../images/comment_header.png') no-repeat center left;
+}
+
+
+
+
+/*****************Similar recipe*******************/
+
+.node-dieta-recipe .title-similar-recipe{ 
+	margin:0;
+	padding: 4px; 
+	font-size: 8px; 
+	line-height: 10px; 
+	position: absolute;background: rgba(0,0,0,0.5);
+	bottom: 0;
+	width: 82px;	
+	margin-left: 5px;color: white;
+	text-align: center;
+}
+
+.node-dieta-recipe .title-similar-recipe a{
+   color: white;
+   padding: 0;
+}
+
+.node-dieta-recipe .image_similar-recipe{
+ 
+}
+
+
+
+/***********Gallery, Jcarousel, Lightbox2*********************************/
+
+.node-type-dieta-recipe #lightbox #prevLink{
+	background: url('../images/left_lightbox.png') no-repeat;
+	left: 15px;
+	top: 50%;
+	position: absolute;
+}
+
+.node-type-dieta-recipe #lightbox #nextLink{
+	background: url('../images/right_lightbox.png') no-repeat;
+	right: 21px;
+	top: 50%;
+	position: absolute;
+	width: 25px;
+}
+
+.node-type-dieta-recipe #lightbox #imageData #caption{
+	font-weight: normal;
+	color: white;
+	padding: 6px 0;	
+	padding-left: 2px;
+	display: block;
+	font-size: 12px;
+	line-height: 18px;
+}
+
+
+.node-type-dieta-recipe #numberDisplay{
+	font-style: italic;
+	font-size: 16px;
+	color: white;
+	font-family: Arial;
+}
+
+
+.node-type-dieta-recipe #outerImageContainer{
+	border-radius: 10px;
+}
+
+.node-dieta-recipe .jcarousel-skin-default{
+	/*display: none;*/
+}
+
+.jcarousel-skin-default .jcarousel-clip-horizontal{
+	width: 240px;
+}
+
+.node-dieta-recipe .jcarousel-skin-default .jcarousel-container-horizontal{
+	background: #878786;
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	width: 250px;
+	height: 150px;
+}
+
+.node-dieta-recipe .jcarousel-skin-default .next_photo_recipe{
+	position: absolute;
+	top: 55px;
+	right: 10px;
+       background: url('../images/right_arrow.png') no-repeat;
+       margin-top: 27px;
+	width: 32px;
+	height: 32px
+}
+
+.node-dieta-recipe .jcarousel-skin-default .prev_photo_recipe{
+	position: absolute;
+	top: 55px;
+	left: 10px;
+	background: url('../images/left_arrow.png') no-repeat;
+	margin-top: 27px;
+	width: 32px;
+	height: 32px
+}
+
+.node-dieta-recipe .jcarousel-skin-default .jcarousel-prev{
+   display: none;
+}
+.node-dieta-recipe .jcarousel-skin-default .jcarousel-next{
+   display: none;	
+}
+
+.node-dieta-recipe .jcarousel-skin-default .jcarousel-item a{
+   padding: 0;
+}
+
+.node-dieta-recipe .jcarousel-skin-default .jcarousel-item{
+   width: 260px;
+   height: 150px;
+   border: 0 none;
+   border-radius: 10px;
+}
+
+.tooltip_carousel{
+       position:relative;
+	z-index:1;
+	zoom:1;
+	cursor: pointer;
+	display: inline;
+}
+
+.tooltip_carousel .carousel_block{
+     display:none;
+}
+
+.tooltip_carousel:hover .carousel_block{
+	display:block;
+	position:absolute;
+	z-index:1; 	
+	line-height:normal;	
+	text-decoration:none;
+	padding:3px 5px;
+	bottom:5px;
+	
+}
+
+.number_photo_recipe{
+	background: #797978;
+	height: 25px;
+	border-bottom-left-radius: 10px;
+	border-bottom-right-radius: 10px;
+	color: white;
+	line-height: 25px;
+}
+
+
+
+
+/************Tooltip Begin**************/
+
+.tooltip{
+	position:relative;
+	z-index:1;
+	zoom:1;
+	cursor: pointer;
+}
+.tooltip em{
+   display:none;
+}
+
+.tooltip:hover em{
+	display:block;
+	position:absolute;
+	z-index:1;
+ 	background-color:#a0d40c;
+       color: #575757;
+ 	-webkit-border-radius:5px; /* красивости в виде скругленных углов */
+ 	-moz-border-radius:5px;
+ 	border-radius:5px;
+	line-height:normal;	
+	text-decoration:none;
+	padding:3px 5px;
+	bottom:22px;
+	right:0;
+       /* красивости в виде тени */
+	/*-webkit-box-shadow:0 0 5px #000; 
+	-moz-box-shadow:0 0 5px #000;
+	box-shadow:0 0 5px #000;*/
+       font-weight: bold;
+}
+.tooltip:hover em i{	
+	position:absolute;
+	z-index:1;
+	bottom:-7px;
+	left:5px;
+	border-top:7px solid #a0d40c;
+	border-right:7px solid transparent;
+	_border-left:7px solid #a0d40c; /* цвет фона. это для ие6.*/
+	display:block;
+	height:0;
+	overflow:hidden;
+}
+
+/************Tooltip End***************/
+
+
+/************Similar recipe BEGIN ***************/
+.view-id-recipes.view-display-id-block_1 table, .view-id-recipes.view-display-id-block_1 table tr{
+   margin:0;
+   padding: 0;
+}
+
+.view-id-recipes.view-display-id-block_1 tr td{
+   padding: 0;
+   padding-bottom: 10px;
+}
+
+/************Similar recipe END ***************/
+
+.node-dieta-recipe a{
+   text-decoration: none;
+   padding-left: 5px;
+}
+
+.node-dieta-recipe .right_block span.title{
+   font-weight: bold;
+}
+
+.node-dieta-recipe .all_comments{
+  padding-bottom: 10px;
+}
+
+.node-dieta-recipe .button_comments{
+  background: #5fb829;
+  padding: 5px 10px;
+  display: inline;
+  text-align: center;
+  line-height: 12px;
+  border-radius: 7px;
+  text-decoration: none;
+  border: 1px solid #8b8f8f;
+}
+
+.node-dieta-recipe .button_comments a{
+	text-decoration: none;
+	color: white;
+}
+
+.node-dieta-recipe .content
+{
+	
+}
+
+.node-dieta-recipe tr.odd{
+   background: #f2f2f2;
+}
+
+.instruction_block{
+    border-bottom: 1px solid #b8bbbb;
+    border-top: 1px solid #b8bbbb;
+    margin-top: 10px;
+    margin-right: 10px;
+    clear: both;
+}
+
+.node-dieta-recipe .title h2, .prigot{
+  font-size: 18px;
+  font-family: Arial;
+  text-transform: none;
+  color: #494949;
+  padding: 10px 5px ;
+}
+
+.node-type-dieta-recipe #main-wrapper #main{
+	width: 1000px;
+}
+.node-type-dieta-recipe .content{
+
+	
+}
+
+.node-type-dieta-recipe .content_recipe{
+	/*padding-left: 10px;*/
+}
+
+.node-type-dieta-recipe .tabs.primary.clearfix{
+	margin: 0;
+}
+.node-type-dieta-recipe .first_block{
+	/*border-bottom: 1px solid #b8bbbb;*/
+	min-height: 169px;
+	
+}
+
+.node-type-dieta-recipe .region.region-content{
+	background: rgba(255,255,255,0.6);
+	
+  /*border-radius: 10px;*/
+  padding: 10px;
+}
+
+.node-type-dieta-recipe div.tabs{
+	margin-left: 40px;
+}
+
+.node-type-dieta-recipe .content_dieta_recipe{
+	width: 486px;
+	/*padding-top: 10px;*/
+       float: left;
+}
+
+.node-type-dieta-recipe .image_dieta_recipe{
+	float: left;
+	/*border: 2px solid #959595;*/
+	margin-right: 10px;
+	/*border-radius: 3px;*/
+}
+
+.node-type-dieta-recipe .container {
+  overflow: hidden;
+}
+
+.node-type-dieta-recipe .left-container {
+  float: left;
+}
+
+.node-type-dieta-recipe .right-container {
+  float: right;
+}
+
+.node-type-dieta-recipe .time_cook{
+	margin-bottom: 5px;
+}
+
+.node-type-dieta-recipe .active_time_cook{
+	background: url('../images/clock_red.png') no-repeat;
+	/*margin-left: 212px;*/
+	padding-left: 20px;
+/*	width: 106px;*/
+  margin-top: 15px;
+  cursor: pointer;
+}
+
+.node-type-dieta-recipe .passive_time_cook{
+	background: url('../images/clock_green.png') no-repeat;
+	/*margin-left: 212px;*/
+	padding-left: 20px;
+	/*width: 106px;*/
+  margin-top: 15px;
+	cursor: pointer;
+}
+
+.node-type-dieta-recipe .general_recipe{
+       border-bottom: 1px solid #b8bbbb;
+	min-height: 160px;
+}
+
+.node-type-dieta-recipe .information_dieta_recipe{
+
+}
+
+/**********  INSTRUCTION *************/
+
+ol.instructions{
+   list-style-position: outside;
+   padding-left: 25px;
+}
+
+ol.instructions li{
+   padding-bottom: 10px;
+}
+
+
+/*********** RIGHT SIDEBAR BEGIN ******************/
+
+.node-type-dieta-recipe .right_sidebar_recipe{
+	
+}
+
+
+.node-type-dieta-recipe .right_block{
+	/*border-bottom: 1px solid #b8bbbb;*/
+	margin-bottom: 5px;
+	font-family: Arial;
+	padding: 5px;
+}
+
+.node-type-dieta-recipe  .right_sidebar_recipe .sidebar_title h2{
+	font-weight: bold;
+	text-transform: none;
+	font-size: 14px;
+	color: #032b08;
+}
+
+.node-type-dieta-recipe .right_sidebar_recipe{
+	float: right;
+	width: 200px;
+	border-left: 1px solid #b8bbbb;
+	padding: 7px;
+	/*border-radius: 10px;*/
+
+}
+
+/*********** RIGHT SIDEBAR END ******************/
+
+
+.node-type-dieta-recipe .ingredients_dieta_recipe{
+	clear: both;
+}
+
+/* Книга рецептов*/
+.node-type-dieta-recipe .book_recipe
+{	
+       z-index: 100;
+	position: fixed;
+	width: 242px;	
+	background: #adad9c;
+	bottom: 0;
+	right: 200px;
+	border-radius: 5px;
+}
+
+.node-type-dieta-recipe .header_book_recipe{
+	background: url('../images/book_recipe.png') no-repeat 25px 8px;
+	padding: 5px;
+	border-bottom: 1px solid #636363;
+	margin: 0;
+	padding: 0;
+	line-height: 31px;
+	height: 30px;	
+}
+
+.node-type-dieta-recipe .header_book_recipe p{
+	text-align: center;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.node-type-dieta-recipe  .content_book_recipe li:first-child{
+	border-right: 1px solid #636363;
+}
+
+.node-type-dieta-recipe  .content_book_recipe li{
+	width: 110px;
+	float: left;
+	padding: 0 5px;
+	background: #adad9c;
+}
+
+.node-type-dieta-recipe  .content_book_recipe li a{
+	line-height: 5px;
+	font-size: 11px;
+	text-decoration: none;
+}
+
+.node-type-dieta-recipe #note-node-form textarea {
+	height: 50px;
+}
+
+.node-type-dieta-recipe #note-node-form .vertical-tabs,
+.node-type-dieta-recipe #note-node-form .vertical-tabs-panes {
+	display: none;
+}
+
+.node-type-dieta-recipe .social-buttons-wrapper {
+  text-align: center;
+}
+
+.node-type-dieta-recipe .social-buttons {
+  overflow: hidden;
+  display: inline-block; 
+}
+
+.node-type-dieta-recipe .social-buttons > div, 
+.node-type-dieta-recipe .social-buttons > span {
+  margin-right: 10px;
+  float: left;
+}
+
+.node-type-dieta-recipe .social-buttons .plus1-widget {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+/****************SLIDER*********************/
+
+.view-id-my_notes.view-display-id-block .views-row {
+  margin-bottom: 15px;
+}
+
+.view-id-my_notes.view-display-id-block .views-field-created .field-content {
+  font-weight: bold;
+}
+

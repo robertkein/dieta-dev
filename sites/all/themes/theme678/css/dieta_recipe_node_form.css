@@ -1,0 +1,405 @@
+/*
+  Форма редактирования и создания рецепта
+*/
+
+#dieta-recipe-node-form {
+  overflow: hidden;
+}
+
+#dieta-recipe-node-form .form-sidebars-wrapper {
+  overflow: hidden;
+  clear: both;
+}
+
+#dieta-recipe-node-form .content-dieta-recipe {
+  width: 753px;
+	float: left;
+}
+#dieta-recipe-node-form #edit-title {
+	width: 739px;
+}
+
+#dieta-recipe-node-form .form-item-title {
+	margin-top: 0px;
+  margin-bottom: 23px;
+}
+
+#dieta-recipe-node-form .form-item-title label {
+  margin-bottom: 13px;
+}
+
+#dieta-recipe-node-form  .fields-block {
+	background-color: #f8f7f2;
+	padding-top: 14px;
+	padding-bottom: 14px;  
+	padding-left: 14px;  
+	padding-right: 14px;  
+  margin-top: 0;
+  margin-bottom: 23px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+#dieta-recipe-node-form .content-dieta-recipe .fields-block {
+	width: 725px;  
+}
+
+#dieta-recipe-node-form #img-and-fields {
+}
+
+#dieta-recipe-node-form label {
+  color: #0d0d0d;
+  font-size: 14px;
+}
+
+#dieta-recipe-node-form table {
+  margin: 0;
+}
+
+#dieta-recipe-node-form table tr, 
+#dieta-recipe-node-form table tr.even, 
+#dieta-recipe-node-form table tr.odd {
+  background-color: transparent;
+}
+
+#dieta-recipe-node-form #img-and-fields td {
+	padding-left: 0;
+	padding-right: 0;
+}
+
+#dieta-recipe-node-form #img-and-fields td.image {
+  width: 278px;
+}
+
+#dieta-recipe-node-form #img-and-fields td.image .field-type-image {
+  margin: 0;
+}
+
+#dieta-recipe-node-form #img-and-fields td.image label {
+	color: #5c5c5c;
+}
+
+#dieta-recipe-node-form #img-and-fields td.fields {
+}
+
+
+#dieta-recipe-node-form #img-and-fields .form-item {
+	overflow: hidden;
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+#dieta-recipe-node-form #img-and-fields .form-item.form-item-dieta-recipe-description-value {
+  margin-bottom: 0px;
+}
+
+#dieta-recipe-node-form #img-and-fields select {
+  height: 22px;
+  padding-top: 0;
+  padding-bottom: 0;
+} 
+
+#dieta-recipe-node-form #img-and-fields input[type="text"] {
+  height: 20px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#dieta-recipe-node-form .form-item-dieta-recipe-preptime {
+  color: #0d0d0d;
+}
+
+#dieta-recipe-node-form .form-item-dieta-recipe-preptime label {
+  background-image: url("../images/clock_green_2.png");
+  background-repeat: no-repeat;
+  background-position: right 0;
+}
+
+#dieta-recipe-node-form .form-item-dieta-recipe-preptime input {
+  width: 35px;
+  margin-right: 3px;
+}
+
+#dieta-recipe-node-form #recipe-preptime-minutes {
+  margin-left: 6px;
+}
+
+#dieta-recipe-node-form  .description {
+  display: none;
+}
+
+#dieta-recipe-node-form #edit-field-recipe-classifier-und {
+	width: 179px;
+}
+
+#dieta-recipe-node-form #edit-dieta-recipe-yield {
+	width: 49px;
+}
+
+#dieta-recipe-node-form #img-and-fields .fields .form-item-dieta-recipe-description-value label {
+  display: none;
+}
+
+#dieta-recipe-node-form #img-and-fields .fields label {
+	float: left;
+  line-height: 24px;
+  margin-right: 5px;
+  width: 178px;
+} 
+
+#dieta-recipe-node-form #img-and-fields textarea {
+  height: 167px;
+  width: 100%;
+	padding-top: 15px;
+	padding-left: 9px;
+	padding-right: 9px;
+	padding-bottom: 15px;
+	border: 1px solid #0d0d0d;
+}
+
+#dieta-recipe-node-form .right-sidebar-recipe {
+  float: right;
+  width: 262px;
+  margin-left: 28px;
+}
+
+#dieta-recipe-node-form #edit-dieta-recipe-description-format {
+	display: none;
+}
+
+#dieta-recipe-node-form #edit-dieta-recipe-description-value {
+}
+
+#dieta-recipe-node-form #ingredient-list .choice-flag,
+#dieta-recipe-node-form #ingredient-list th,
+#dieta-recipe-node-form .tabledrag-toggle-weight-wrapper,
+#dieta-recipe-node-form .fieldset-legend,
+#dieta-recipe-node-form #ingredient-list label{
+	display: none;
+}
+
+#dieta-recipe-node-form #ingredient-list td {
+	padding: 0;
+  padding-bottom: 19px;
+}
+
+#dieta-recipe-node-form fieldset {
+	padding: 0;
+	margin: 0;
+	border: none;
+}
+
+#dieta-recipe-node-form #ingredient-list input[type="text"], 
+#dieta-recipe-node-form #ingredient-list select {
+	margin-right: 25px;
+}
+
+#dieta-recipe-node-form #ingredient-list .form-item-dieta-recipe-ingredients-quantity {
+	width: 96px;
+}
+
+#dieta-recipe-node-form #ingredient-list select.form-item-dieta-recipe-ingredients-unit-key {
+	width: 89px;
+}
+
+#dieta-recipe-node-form #ingredient-list .form-item-dieta-recipe-ingredients-name {
+	width: 126px;
+}
+
+#dieta-recipe-node-form #ingredient-list input[type="text"].form-item-dieta-recipe-ingredients-note {
+	width: 298px;
+	margin-right: 0;
+}
+
+#dieta-recipe-node-form #edit-dieta-recipe-ingredients-dieta-recipe-more-ingredients,
+#dieta-recipe-node-form .field-add-more-submit {
+	background-image: url("../images/add_icon.png");
+	width: 34px;
+	height: 34px;
+	border: none;
+	font-size: 0;
+	color: transparent;
+	padding: 0;
+	margin: 0;
+}	
+
+#dieta-recipe-node-form .field-name-field-recipe-step-image {
+	color: transparent;
+}
+
+#dieta-recipe-node-form .field-multiple-drag, 
+#dieta-recipe-node-form #edit-field-recipe-steps th, 
+#dieta-recipe-node-form #edit-field-recipe-steps label {
+	display: none;
+}
+
+#dieta-recipe-node-form #edit-field-recipe-steps .ajax-new-content { 
+  float: none;
+  margin: 0;
+  padding: 0px;
+}
+
+#dieta-recipe-node-form #edit-field-recipe-steps .ajax-new-content > div { 
+  float: left;
+  margin-right: 15px;
+}
+#dieta-recipe-node-form .field-type-field-collection td > input[name$="remove_button"], 
+#dieta-recipe-node-form .field-type-field-collection td .ajax-new-content > input[name$="remove_button"] {
+	display: none;
+}
+
+#dieta-recipe-node-form #field-recipe-steps-values td {
+  padding-bottom: 19px;
+}
+
+#dieta-recipe-node-form #field-recipe-steps-values tr, 
+#dieta-recipe-node-form #field-recipe-steps-values td {
+  padding-left: 0px;
+  padding-right: 0px;
+  padding-top: 0px;
+}
+#dieta-recipe-node-form .field-name-field-recipe-step-image {
+  margin-right: 30px !important;
+}
+
+#dieta-recipe-node-form .form-item-dieta-recipe-ingredients-note {
+  height: 64px;
+}
+
+#dieta-recipe-node-form .field-name-field-recipe-step-desc {
+  margin-right: 0px !important;
+}
+
+#dieta-recipe-node-form .field-name-field-recipe-step-image label {
+	display: block !important;
+	color: transparent;
+}
+
+#dieta-recipe-node-form .field-name-field-recipe-step-desc textarea {
+	height: 64px;
+	width: 589px;
+}
+
+#dieta-recipe-node-form #field-recipe-steps-add-more-wrapper .form-item {
+	padding: 0px;
+	margin: 0px;
+}
+
+#dieta-recipe-node-form .step-number {
+	line-height: 65px;
+	font-size: 49px;
+}
+
+#dieta-recipe-node-form .form-item-dieta-recipe-source .description {
+  display: none;
+} 
+
+#dieta-recipe-node-form .form-item-dieta-recipe-source input[type="text"] {
+  width: 739px;
+}
+
+#dieta-recipe-node-form textarea {
+  line-height: 19px;
+}
+
+#dieta-recipe-node-form input[type="text"], #dieta-recipe-node-form input[type="password"], 
+#dieta-recipe-node-form input[type="search"], #dieta-recipe-node-form textarea {
+  font-family:Arial, Helvetica, sans-serif;
+  font-size:13px;
+  color:#666;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-top: 0;
+  padding-bottom: 0;
+  background:#fff;
+  border: 1px solid #0d0d0d;
+  height: 25px;
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+} 
+
+body.page-node-add-dieta-recipe	#main-wrapper #main, 
+body.page-node-edit.node-type-dieta-recipe #main-wrapper #main {
+	width: 1044px;
+}
+
+body.page-node-add-dieta-recipe	.region-content, 
+body.page-node-edit.node-type-dieta-recipe .region-content {
+  background-color: transparent;
+  padding: 0;
+  padding-top: 14px;
+}  
+
+#dieta-recipe-node-form  .right-sidebar-recipe .fields-block {
+  width: 234px;
+}
+
+#dieta-recipe-node-form .title-2 {
+  font-size: 16px;
+  color: #0d0d0d; 
+}
+
+
+#dieta-recipe-node-form tr.price {
+  border-top: 3px solid black;
+  border-bottom: 3px solid black;
+  margin-top: px;
+  padding: 0px;
+  line-height: 33px;
+}
+
+#dieta-recipe-node-form .nutritional-value-receipe td {
+  padding-left: 0px;
+}
+#dieta-recipe-node-form .nutritional-value-receipe tr {
+  line-height: 23px;
+}
+
+#dieta-recipe-node-form .field-caloric_effect td {
+  padding-top: 6px;
+}
+
+#dieta-recipe-node-form .field-proteins td {
+  padding-bottom: 6px;
+}
+
+#dieta-recipe-node-form input#edit-preview {
+  display: none;
+}
+
+#dieta-recipe-node-form .hint-inside-form-elements {
+  color: #d3d3d3;
+}
+
+#dieta-recipe-node-form #ingestion-fields {
+  margin-top: 44px;
+}
+#dieta-recipe-node-form #ingestion-fields select {
+  width: 100%;
+}
+
+#dieta-recipe-node-form #ingestion-fields > div {
+  margin-top: 14px;
+}
+
+#dieta-recipe-node-form #ingestion-fields label {
+  margin-bottom: 7px;
+}
+
+#dieta-recipe-node-form select option:first-child  {
+  color: #d3d3d3;
+}
+
+#dieta-recipe-node-form select option {
+  color: #666;
+}
+
+#dieta-recipe-node-form ::-webkit-input-placeholder { color:#d3d3d3; }
+#dieta-recipe-node-form ::-moz-placeholder { color:#d3d3d3; } /* firefox 19+ */
+#dieta-recipe-node-form :-ms-input-placeholder { color:#d3d3d3; } /* ie */
+#dieta-recipe-node-form input:-moz-placeholder { color:#d3d3d3; }
+
+#dieta-recipe-node-form .dieta-recipe-ingredients-block-names {
+  display: none;
+}

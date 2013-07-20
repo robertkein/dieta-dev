@@ -1,0 +1,395 @@
+# Russian translation of Drupal module Yandex.Metrics
+# Copyright Konstantin Komelin <konstantin.komelin@gmail.com>
+# Generated from files:
+#  yandex_metrics.module: n/a
+#  yandex_metrics.info: n/a
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: yandex_metrics 7.x-1.x\n"
+"POT-Creation-Date: 2012-12-09 17:49+0300\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: Konstantin Komelin <konstantin.komelin@gmail.com>\n"
+"Language-Team: Russian <konstantin.komelin@gmail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: yandex_metrics.module:35
+msgid "Administer Yandex.Metrics Settings"
+msgstr ""
+
+#: yandex_metrics.module:38
+msgid "Access Yandex.Metrics report"
+msgstr ""
+
+#: yandex_metrics.module:114;200
+msgid "Popular content"
+msgstr ""
+
+#: yandex_metrics.module:124;218
+msgid "Today"
+msgstr ""
+
+#: yandex_metrics.module:125;219
+msgid "Yesterday"
+msgstr ""
+
+#: yandex_metrics.module:126;220
+msgid "Week"
+msgstr ""
+
+#: yandex_metrics.module:127;221
+msgid "Month"
+msgstr ""
+
+#: yandex_metrics.module:131
+msgid "Select date period"
+msgstr ""
+
+#: yandex_metrics.module:132
+msgid "This date period will be used to filter popular content."
+msgstr ""
+
+#: yandex_metrics.module:138
+msgid "Select count of links to show"
+msgstr ""
+
+#: yandex_metrics.module:139
+msgid "The count of links that shown in the block."
+msgstr ""
+
+#: yandex_metrics.module:225
+msgid "Quick filter"
+msgstr ""
+
+#: yandex_metrics.module:232
+msgid "Submit"
+msgstr ""
+
+#: yandex_metrics.module:300;970
+msgid "Please create Yandex.Metrics counter for the site first. See more details !link."
+msgstr ""
+
+#: yandex_metrics.module:300;309;317;957;970;984;1316;1325
+msgid "here"
+msgstr ""
+
+#: yandex_metrics.module:309;957
+msgid "Perhaps you have not yet placed Yandex.Metrics counter code on the site. You can do this !link."
+msgstr ""
+
+#: yandex_metrics.module:317;984
+msgid "Please make sure that your application is authorized !link."
+msgstr ""
+
+#: yandex_metrics.module:398
+msgid "There is no information about search phrases for the selected date range."
+msgstr ""
+
+#: yandex_metrics.module:403
+msgid "Visits (%)"
+msgstr ""
+
+#: yandex_metrics.module:403
+msgid "Phrase"
+msgstr ""
+
+#: yandex_metrics.module:417;1141
+msgid "Popular Search Phrases"
+msgstr ""
+
+#: yandex_metrics.module:440
+msgid "There is no information about traffic sources for the selected date range."
+msgstr ""
+
+#: yandex_metrics.module:445;1136
+msgid "Traffic Sources"
+msgstr ""
+
+#: yandex_metrics.module:488
+msgid "There is no information about page views and visitors for the selected date range."
+msgstr ""
+
+#: yandex_metrics.module:510;1131
+msgid "Page Views, Visitors, New Visitors"
+msgstr ""
+
+#: yandex_metrics.module:534;572
+msgid "Page Views"
+msgstr ""
+
+#: yandex_metrics.module:535
+msgid "Visitors"
+msgstr ""
+
+#: yandex_metrics.module:536
+msgid "New Visitors"
+msgstr ""
+
+#: yandex_metrics.module:569
+msgid "There is no information about popular content for the selected date range."
+msgstr ""
+
+#: yandex_metrics.module:572
+msgid "URL"
+msgstr ""
+
+#: yandex_metrics.module:585;1146
+msgid "Popular Content"
+msgstr ""
+
+#: yandex_metrics.module:595;65
+msgid "Counter Code"
+msgstr ""
+
+#: yandex_metrics.module:598
+msgid "Paste Yandex.Metrics counter code for your site here."
+msgstr ""
+
+#: yandex_metrics.module:603
+msgid "Page specific tracking settings"
+msgstr ""
+
+#: yandex_metrics.module:610
+msgid "Add to every page except the listed pages."
+msgstr ""
+
+#: yandex_metrics.module:611
+msgid "Add to the listed pages only."
+msgstr ""
+
+#: yandex_metrics.module:615
+msgid "Add code to specific pages"
+msgstr ""
+
+#: yandex_metrics.module:621
+msgid "Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are %blog for the blog page and %blog-wildcard for every personal blog. %front is the front page."
+msgstr ""
+
+#: yandex_metrics.module:624
+msgid "Pages"
+msgstr ""
+
+#: yandex_metrics.module:634
+msgid "Role specific tracking settings"
+msgstr ""
+
+#: yandex_metrics.module:641
+msgid "Add tracking for specific roles"
+msgstr ""
+
+#: yandex_metrics.module:643
+msgid "Add to the selected roles only"
+msgstr ""
+
+#: yandex_metrics.module:644
+msgid "Add to every role except the selected ones"
+msgstr ""
+
+#: yandex_metrics.module:656
+msgid "Roles"
+msgstr ""
+
+#: yandex_metrics.module:659
+msgid "If none of the roles are selected, all users will be tracked. If a user has any of the roles checked, that user will be tracked (or excluded, depending on the setting above)."
+msgstr ""
+
+#: yandex_metrics.module:665
+msgid "Save"
+msgstr ""
+
+#: yandex_metrics.module:665
+msgid "Save & Continue"
+msgstr ""
+
+#: yandex_metrics.module:690
+msgid "The Counter Code settings has been saved successfully."
+msgstr ""
+
+#: yandex_metrics.module:700
+msgid "The application is already authorized."
+msgstr ""
+
+#: yandex_metrics.module:703
+msgid "The application is not authorized yet."
+msgstr ""
+
+#: yandex_metrics.module:712
+msgid "Client ID"
+msgstr ""
+
+#: yandex_metrics.module:715
+msgid "Enter your application client ID in this field."
+msgstr ""
+
+#: yandex_metrics.module:720
+msgid "Client Secret"
+msgstr ""
+
+#: yandex_metrics.module:722
+msgid "Enter your application secret in this field."
+msgstr ""
+
+#: yandex_metrics.module:727
+msgid "Re-Authorize Application"
+msgstr ""
+
+#: yandex_metrics.module:727
+msgid "Authorize Application"
+msgstr ""
+
+#: yandex_metrics.module:745
+msgid "Please set Client ID first."
+msgstr ""
+
+#: yandex_metrics.module:763;780
+msgid "An error has occurred. Please try again."
+msgstr ""
+
+#: yandex_metrics.module:789
+msgid "Congratulations! Your application has been authorized by Yandex.Metrics service."
+msgstr ""
+
+#: yandex_metrics.module:1023
+msgid "Front page"
+msgstr ""
+
+#: yandex_metrics.module:1119
+msgid "Load reports via AJAX"
+msgstr ""
+
+#: yandex_metrics.module:1125
+msgid "Reports visibility settings"
+msgstr ""
+
+#: yandex_metrics.module:1126
+msgid "Choose reports to display on Yandex.Metrics Summary Report page."
+msgstr ""
+
+#: yandex_metrics.module:1151;1182
+msgid "Geography of Visits"
+msgstr ""
+
+#: yandex_metrics.module:1177
+msgid "There is no information about geography of visits for the selected date range."
+msgstr ""
+
+#: yandex_metrics.module:1209
+msgid "Others"
+msgstr ""
+
+#: yandex_metrics.module:1308
+msgid "About the module"
+msgstr ""
+
+#: yandex_metrics.module:1309
+msgid "The <a href=\"@yandex_metrika\" target=\"_blank\">Yandex.Metrics</a> service is European alternative of Google Analytics. This is a free tool that helps you to increase the conversion rate of your site."
+msgstr ""
+
+#: yandex_metrics.module:1310
+msgid "The Yandex.Metrics module allows to integrate your site with <a href=\"@yandex_metrika\" target=\"_blank\">Yandex.Metrics</a> service. You can install counter code on the site pages, authorize the site on Yandex and view basic reports by key effectiveness indicators."
+msgstr ""
+
+#: yandex_metrics.module:1311
+msgid "Usage"
+msgstr ""
+
+#: yandex_metrics.module:1313
+msgid "Installing counter"
+msgstr ""
+
+#: yandex_metrics.module:1314
+msgid "Yandex.Metrics counter is JavaScript code that monitors user behavior on your website. You should <a href=\"@create_counter\" target=\"_blank\">create</a> and <a href=\"@install_counter\">install</a> the counter to work with Yandex.Metrics service."
+msgstr ""
+
+#: yandex_metrics.module:1315
+msgid "Authorizing site"
+msgstr ""
+
+#: yandex_metrics.module:1316
+msgid "To get access to the <a href=\"@reports-url\">reports</a> register Yandex application at !app_register_link. Then enter your application Client ID and Client Secret in the appropriate fields on the <a href=\"@authorization-page\">Authorization</a> page. The full list of your Yandex applications is located !app_list_link."
+msgstr ""
+
+#: yandex_metrics.module:1317
+msgid "Configuring reports"
+msgstr ""
+
+#: yandex_metrics.module:1318
+msgid "You can choose necessary reports <a href=\"@report-setting-page\">here</a> to display on <a href=\"@summary-report-page\">Yandex.Metrics Summary Report</a> page. Also, we recommend you to enable AJAX for reports by checking appropriate field on the <a href=\"@report-setting-page\">report settings page</a>."
+msgstr ""
+
+#: yandex_metrics.module:1322
+msgid "Yandex.Metrics counter is JavaScript code that monitors user behavior on your website. You should <a href=\"@create_counter\" target=\"_blank\">create</a> and install the counter code to work with Yandex.Metrics service."
+msgstr ""
+
+#: yandex_metrics.module:1325
+msgid "To get access to the <a href=\"@reports-url\">reports</a> register Yandex application at !app_register_link. Then enter your application Client ID and Client Secret in the appropriate fields on this page. The full list of your Yandex applications is located !app_list_link."
+msgstr ""
+
+#: yandex_metrics.module:1326
+msgid "Your Yandex application Callback URI: @callback-uri"
+msgstr ""
+
+#: yandex_metrics.module:1329
+msgid "You can choose necessary reports to display on <a href=\"@summary-report-page\">Yandex.Metrics Summary Report</a> page. Also, we recommend you to enable AJAX for reports by checking the appropriate field on this page."
+msgstr ""
+
+#: yandex_metrics.module:762;779;788;828;966;980;1060
+msgid "yandex_metrics"
+msgstr ""
+
+#: yandex_metrics.module:762
+msgid "The \"code\" parameter is empty."
+msgstr ""
+
+#: yandex_metrics.module:779
+msgid "Token request seems to be fail, due to \"%error\"."
+msgstr ""
+
+#: yandex_metrics.module:788
+msgid "Token request is successful."
+msgstr ""
+
+#: yandex_metrics.module:828
+msgid "Counters request seems to be fail, due to \"%error\"."
+msgstr ""
+
+#: yandex_metrics.module:966
+msgid "Cron: counter ID is not set."
+msgstr ""
+
+#: yandex_metrics.module:980
+msgid "Cron: application is not authorised."
+msgstr ""
+
+#: yandex_metrics.module:1060
+msgid "Popular content for %filter has been saved."
+msgstr ""
+
+#: yandex_metrics.module:57 yandex_metrics.info:0
+msgid "Yandex.Metrics"
+msgstr ""
+
+#: yandex_metrics.module:59
+msgid "Integrate your site with Yandex.Metrics service."
+msgstr ""
+
+#: yandex_metrics.module:73
+msgid "Authorization"
+msgstr ""
+
+#: yandex_metrics.module:81
+msgid "Reports"
+msgstr ""
+
+#: yandex_metrics.module:88;95
+msgid "Yandex.Metrics Summary Report"
+msgstr ""
+
+#: yandex_metrics.info:0
+msgid "Yandex.Metrics Integration."
+msgstr ""
+

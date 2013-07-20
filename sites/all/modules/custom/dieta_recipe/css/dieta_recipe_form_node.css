@@ -1,0 +1,17 @@
+form#dieta-recipe-node-form .field-name-field-recipe-step-cul-action .form-radios {
+  overflow: hidden;
+}
+
+form#dieta-recipe-node-form .field-name-field-recipe-step-cul-action .form-radios .form-type-radio {
+  float: left;
+  margin-right: 15px;
+}
+
+form#dieta-recipe-node-form #field-recipe-steps-values td {
+  overflow: hidden;
+}
+
+form#dieta-recipe-node-form #field-recipe-steps-values td > div {
+  float: left;
+  margin-right: 15px;
+}

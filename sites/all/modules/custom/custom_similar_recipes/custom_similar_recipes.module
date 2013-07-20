@@ -1,0 +1,61 @@
+<?php
+
+// количество похожих рецептов, отображаемых в блоке
+define('CSR_COUNT_SIMILAR_RECIPES', 4);
+
+/**
+ * 
+ * @param int $nid
+ *	- nid рецепта, для которого надо вывести похожие
+ * @return array[int] 
+ *	- массив, содержащий nid-ы всех похожих рецептов в порядке убывания похожести
+ */
+function csr_get_similar_recipes_nids($nid) {
+	$node = node_load($nid);
+	$ings = array();
+	if (!empty($node->dieta_recipe_ingredients['ing'])) {
+		foreach ($node->dieta_recipe_ingredients['ing'] as $ing) {
+			$ings[] = $ing['ingredient_id'];
+		}
+	}
+	// берем из бд список нужного количества похожих рецептов.
+	$query = db_select('dieta_recipe_node_ingredient', 'i');
+	$query->fields('i', array('nid'));
+	$query->addExpression('count(*)', 'count_ings');
+	$query->condition('i.ingredient_id', $ings, 'IN');
+	$query->condition('i.nid', $nid, '<>');
+	$query->groupBy('i.nid');
+	$query->orderBy('count_ings', 'DESC');
+	$query->range(0, CSR_COUNT_SIMILAR_RECIPES);
+	$similar_nids = $query->execute()->fetchCol();
+	return $similar_nids;
+}
+
+/*
+ * Возвращает содержимое блока похожих рецептов
+ */
+function csr_get_block_similar_recipes($nid) {
+	$block_content = cache_get('csr_block_similar_recipes_'.$nid);
+	if (empty($block_content)) {
+		$similar_nids = csr_get_similar_recipes_nids($nid);
+		if (!empty($similar_nids)) {
+			$view_arg = implode('+', $similar_nids);
+			$view = views_embed_view('recipes','block_1', $view_arg);
+			$block_content = $view;
+			// записываем в кэш содержимое блока для данного рецепта на сутки
+			cache_set('csr_block_similar_recipes_'.$nid, $block_content, 'cache_block', 24*60*60);
+		}
+	}
+	return $block_content;
+}
+
+/*
+ * Implements hook_preprocess_hook().
+ */
+function custom_similar_recipes_preprocess_node(&$vars) {
+  $type_node = $vars['node']->type;
+	if ($type_node == "dieta_recipe"){ 
+		$nid = $vars['node']->nid;
+		$vars['content']['similar_recipes'] = csr_get_block_similar_recipes($nid);
+	}
+}

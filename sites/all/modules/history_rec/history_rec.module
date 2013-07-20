@@ -1,0 +1,174 @@
+<?php
+
+
+/**
+ * @see http://drupal.org/project/history_rec
+ */
+
+define('HISTORY_REC_UID_WATERMARK_INCREMENT', 1000000);
+
+/**
+ * Implements hook_help().
+ */
+function history_rec_help($path, $args) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#history_rec":
+      $output = '<p>'.  t("This module generates node recommendations based on user browsing history") .'</p>';
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implements hook_menu().
+ */ 
+function history_rec_menu() {
+  $items = array();
+  $items['admin/config/search/recommender/history_rec'] = array(
+    'title' => 'Browsing History Recommender',
+    'description' => 'Configure the Browsing History Recommender',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('history_rec_settings_form'),
+    'access arguments' => array('administer recommender'),
+    'file' => 'history_rec.admin.inc'
+  );
+  return $items;
+}
+
+
+/**
+ * Implements hook_views_api().
+ */
+function history_rec_views_api() {
+  return array(
+    'api' => 3,
+  );
+}
+
+/**
+ * Implements hook_cron().
+ */
+function history_rec_cron() {
+  if (variable_get('history_rec_source') == 'accesslog') {
+    $current_aid = variable_get('history_rec_last_aid', 0) + 50000; // at most update 50K records at once.
+    $max_aid = db_query('SELECT MAX(aid) FROM {accesslog}')->fetchField();
+    $current_aid = min($current_aid, $max_aid);
+
+    $update_queue = DrupalQueue::get('history_rec_update_accesslog');
+    $update_queue->createItem($current_aid);
+  }
+}
+
+/**
+ * Implements
+ */
+function history_rec_cron_queue_info() {
+  return array(
+    'history_rec_update_accesslog' => array(
+      'worker callback' => 'history_rec_update_accesslog',
+      'time' => 3600, // allow 60 mins
+    ),
+  );
+}
+
+//function _history_rec_update_history() {
+//  $last_updated = _history_rec_last_updated();
+//  $query = db_select('history')->fields('history', array('uid', 'nid', 'timestamp'))->condition('timestamp', $last_updated, '>');
+//  // TODO: this should be db_merge
+//  db_insert('history_rec_browsing')->from($query)->execute();
+//}
+
+
+/**
+ * take data from accesslog and make them usable as user-item preference.
+ */
+function history_rec_update_accesslog($current_aid) {
+  // update extended uid
+  _history_rec_update_euid();
+  $last_aid = variable_get('history_rec_last_aid', 0);
+
+  // retrieve unique hostname from {accesslog} to be updated to {history_rec_user_map}
+  $sub_query = db_select('history_rec_user_map', 'm')->fields('m', array('hostname'))->distinct();
+  $query = db_select('accesslog', 'a')->fields('a', array('hostname'))->distinct();
+  $query->condition('aid', array($last_aid, $current_aid), 'BETWEEN');
+  $query->condition('uid', 0);
+  $query->condition('hostname', $sub_query, 'NOT IN');
+  $new_hostname = $query->execute()->fetchCol();
+  
+  // update {history_rec_user_map}
+  $euid = db_query('SELECT MAX(euid) FROM {history_rec_user_map}')->fetchField();
+  $insert = db_insert('history_rec_user_map')->fields(array('euid', 'uid', 'hostname', 'created'));
+  foreach ($new_hostname as $hostname) {
+    $euid += 1;
+    $insert->values(array($euid, 0, $hostname, time()));
+    $insert->execute(); // this is to avoid too much data in the memory, so we insert records one at a time.
+  }
+  
+  // update records from {accesslog}
+  $result = db_query("SELECT path, hostname, uid, timestamp FROM {accesslog} WHERE path LIKE 'node%' AND aid BETWEEN :last_aid AND :current_aid",
+            array(':last_aid' => $last_aid, ':current_aid' => $current_aid), array('fetch' => PDO::FETCH_ASSOC));
+  $app_id = recommender_app_load('history_rec', TRUE);
+  
+  foreach ($result as $row) {
+    $nid = substr($row['path'], 5); // strip "node/"   
+    if (!is_numeric($nid)) continue;  // skip the ones like node/21/edit
+    $updated = $row['timestamp'];
+    
+    if ($row['uid'] > 0) {
+      $euid = $row['uid'];
+    }
+    else {
+      $euid = db_query('SELECT euid FROM {history_rec_user_map} WHERE hostname=:hostname', array(':hostname' => $row['hostname']))->fetchField();
+    }
+        
+    //watchdog('history_rec', "$euid, $nid, $updated");
+    db_merge('recommender_preference')
+      ->key(array(
+        'app_id' => $app_id,
+        'source_eid' => $euid,
+        'target_eid' => $nid,
+      ))
+      ->fields(array(
+        'app_id' => $app_id,
+        'source_eid' => $euid,
+        'target_eid' => $nid,
+        'updated' => $updated,
+      ))
+      -> updateFields(array(
+        'updated' => $updated,
+      ))
+      ->execute();
+  }
+
+  // finally set last update time.
+  variable_set('history_rec_last_aid', $current_aid);
+}
+
+
+function _history_rec_update_euid() {
+  $max_uid = db_query('SELECT MAX(uid) FROM {users}')->fetchField();
+  $watermark = variable_get('history_rec_uid_watermark', 2 * HISTORY_REC_UID_WATERMARK_INCREMENT);
+
+  // usually this won't be met regularly.
+  // FIXME: this "if" is not tested. TEST IT.
+  if ($watermark - $max_uid < HISTORY_REC_UID_WATERMARK_INCREMENT) {
+    $watermark += HISTORY_REC_UID_WATERMARK_INCREMENT;
+    variable_set('history_rec_uid_watermark', $watermark);
+    recommender_app_update('history_rec', array(
+      'prediction_score_filter' => '>0.05',
+      'prediction_source_filter' => '<'. $watermark,
+    ));
+
+    db_query('UPDATE {history_rec_user_map} SET euid = euid + :inc WHERE uid == 0', array(':inc' => HISTORY_REC_UID_WATERMARK_INCREMENT));
+    // attention: since we use item-item algorithm, {recommender_similarity} needs not update
+    // attention: also, we won't save predictions for the fake users, so {recommender_prediction} needs no update
+    // update {recommender_preference}
+    $app_id = recommender_app_load('history_rec', TRUE);
+    db_query('UPDATE {recommender_preference} SET source_eid = source_eid + :inc WHERE app_id = :app_id AND source_eid >= :watermark',
+        array(':inc' => HISTORY_REC_UID_WATERMARK_INCREMENT, ':app_id' => $app_id, ':watermark' => $watermark));
+    // iteratively do it again in case max_uid is still large.
+    _history_rec_update_euid();
+  }
+}
+

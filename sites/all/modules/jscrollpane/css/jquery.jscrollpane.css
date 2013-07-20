@@ -1,0 +1,135 @@
+/*
+ * CSS Styles that are needed by jScrollPane for it to operate correctly.
+ *
+ * Include this stylesheet in your site or copy and paste the styles below into your stylesheet - jScrollPane
+ * may not operate correctly without them.
+ */
+
+.jspContainer
+{
+	overflow: hidden;
+	position: relative;
+}
+.jspContainer .jsppane-spacer-left {
+	display:block;
+	width:30px;
+	height:360px;
+	position:absolute;
+	left:0;
+	top:0;
+	background:url(../images/scroll-image-aside-bg.png ) 0 0 no-repeat;
+}
+.jspContainer .jsppane-spacer-right {
+	display:block;
+	width:30px;
+	height:360px;
+	position:absolute;
+	right:0;
+	top:0;
+	background:url(../images/scroll-image-aside-bg.png ) 0 0 no-repeat;
+}
+.jspPane
+{
+	position: absolute;
+}
+
+.jspVerticalBar
+{
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 16px;
+	height: 100%;
+	background: red;
+}
+
+.jspHorizontalBar
+{
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 16px;
+	padding:1px 0;
+	overflow:hidden;
+	background:url(../images/jspTrack-bg.png) 0 0 repeat-x;
+}
+
+.jspVerticalBar *,
+.jspHorizontalBar *
+{
+	margin: 0;
+	padding: 0;
+}
+
+.jspCap
+{
+	display: none;
+}
+
+.jspHorizontalBar .jspCap
+{
+	float: left;
+}
+
+.jspTrack
+{
+	position: relative;
+}
+
+.jspDrag
+{
+	position: relative;
+	top: 0;
+	left: 0;
+	cursor: pointer;
+	background:url(../images/jspDrag-bg.png) 0 0 no-repeat;
+}
+
+.jspHorizontalBar .jspTrack,
+.jspHorizontalBar .jspDrag
+{
+	float: left;
+	height: 100%;
+}
+
+.jspArrow
+{
+	height:16px;
+	text-indent: -20000px;
+	display: block;
+	cursor: pointer;
+}
+
+.jspArrowLeft.jspDisabled {cursor:default; background-position:0 0 !important;}
+.jspHorizontalBar .jspArrowLeft, .jspHorizontalBar .jspArrowLeft.jspDisabled {
+	float:left;
+	width:21px;
+	background:url(../images/jspArrowLeft-bg.png) 0 0 no-repeat;
+}
+.jspHorizontalBar .jspArrowLeft:hover {background-position:0 100%;}
+.jspArrowRight.jspDisabled {cursor:default; background-position:100% 0 !important;}
+.jspHorizontalBar .jspArrowRight, .jspHorizontalBar .jspArrowRight.jspDisabled {
+	float:right;
+	width:21px;
+	background:url(../images/jspArrowRight-bg.png) 100% 0 no-repeat;
+}
+.jspHorizontalBar .jspArrowRight:hover {background-position:100% 100%;}
+
+.jspVerticalBar .jspArrow:focus
+{
+	outline: none;
+}
+
+.jspCorner
+{
+	background: #eeeef4;
+	float: left;
+	height: 100%;
+}
+
+/* Yuk! CSS Hack for IE6 3 pixel bug :( */
+* html .jspCorner
+{
+	margin: 0 -3px 0 0;
+}

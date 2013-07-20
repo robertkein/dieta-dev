@@ -1,0 +1,126 @@
+/* 
+   Темизация виджета подгрузки фото с виджетом Plupload
+*/
+
+.field-type-image.upload-one-button {
+  position: relative;  
+}
+
+.field-type-image.upload-one-button label {
+  display: block;
+  border: 1px solid #f0f1eb;
+  background-color: #dddddd;
+  background-repeat: no-repeat;
+  background-position: center center;
+  text-align: center;
+  position: absolute;
+  top: 0;
+  color: #5c5c5c;
+  font-size: 14px;
+  /*z-index: 100;*/
+}
+
+.field-type-image.upload-one-button .image-preview {
+  background-color: #dddddd;
+  padding: 0;
+}
+
+.field-type-image.upload-one-button input[type="file"], 
+.field-type-image.upload-one-button .form-submit[name$="upload_button"] {
+  display: none;
+}
+
+.field-type-image.upload-one-button .description {
+  display: none;
+}
+
+.field-type-image.upload-one-button .image-widget {
+  position: absolute;
+  top: 0;
+  /*z-index: 110;*/
+}
+
+.field-type-image.upload-one-button .field-type-image {
+  margin-bottom: 0px;
+}
+
+.field-type-image.upload-one-button .image-widget-data {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.field-type-image.upload-one-button .image-widget-data .file > *,
+.field-type-image.upload-one-button .image-widget-data .file-size {
+  display: none;
+}
+
+.field-type-image.upload-one-button .form-submit[name$="remove_button"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: transparent;
+  color: transparent;
+  z-index: 120;
+  cursor: pointer;
+}
+
+/* большой виджет загрузки фоток  */ 
+.field-type-image.upload-one-button.big,
+.field-type-image.upload-one-button .image-preview {
+  width: 261px;
+  height: 226px;
+}
+
+/*.field-type-image.upload-one-button.big  .image-widget-data {
+  width: 261px;
+  height: 226px;
+}*/
+
+.field-type-image.upload-one-button.big label {
+  width: 161px;
+  height: 61px;
+  padding-top: 165px;
+  padding-left: 50px;
+  padding-right: 50px;
+  background-image: url("../images/img_add_icon_big.png");
+  color: transparent;
+  font-size: 0px;
+}
+
+.field-type-image.upload-one-button.big .form-submit[name$="remove_button"] {
+  width: 261px;
+  height: 226px;
+}
+
+/* маленький виджет загрузки фоток  */ 
+.field-type-image.upload-one-button.small, 
+.field-type-image.upload-one-button .image-preview {
+  width: 64px;
+  height: 64px;
+}
+
+.field-type-image.upload-one-button.small label {
+  width: 64px;
+  height: 64px;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+  background-image: url("../images/img_add_icon_small.png");
+  color: transparent;
+  font-size: 0px;
+}
+/*
+.field-type-image.upload-one-button.small  .image-widget-data {
+  width: 64px;
+  height: 64px;
+}*/
+
+.field-type-image.upload-one-button.small .form-submit[name$="remove_button"] {
+  width: 64px;
+  height: 64px;
+}
+
+.field-type-image.upload-one-button .messages.error {
+  display: none;
+}

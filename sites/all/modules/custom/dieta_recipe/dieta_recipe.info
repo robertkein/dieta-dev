@@ -1,0 +1,4 @@
+name = Dieta Recipe
+description = Collect and display dieta recipes. Module written for dieta-abc.ru portal
+core = 7.x
+version = 7.x-1.x-dev

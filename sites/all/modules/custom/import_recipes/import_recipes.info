@@ -1,0 +1,7 @@
+name = Import recipes for yandex
+description = Create xml file 
+package = Custom
+core = 7.x
+version = "7.x-2.6"
+core = "7.x"
+

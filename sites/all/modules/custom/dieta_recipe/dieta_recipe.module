@@ -1,0 +1,2647 @@
+<?php
+
+
+/**
+ * @file
+ * recipe.module - share recipes
+ */
+
+// $block_delta constants.
+define('DIETA_RECIPE_BLOCK_RECENT', 0);
+define('DIETA_RECIPE_BLOCK_SUMMARY', 1);
+define('DIETA_RECIPE_TAXONOMY_VOCABULARY',  variable_get('dieta_recipe_taxonomy_vocabulary', 'products'));
+
+/**
+ * Implementation of hook_help().
+ */
+function dieta_recipe_help($path, $arg) {
+  switch ($path) {
+    case 'node/add/dieta_recipe':
+      return variable_get('dieta_recipe_help', '');
+    case 'admin/content/dieta_recipe/export_multi':
+      $output = '<p>' . t('You can enable/disable bulk export formats on the <a href="@modules-page">modules page</a> in the recipes section.', array('@modules-page' => url('admin/build/modules'))) . '</p>';
+      return $output;
+    case 'admin/content/dieta_recipe/import_multi':
+      $output = '<p>' . t('You can enable/disable bulk import formats on the <a href="@modules-page">modules page</a> in the recipes section.', array('@modules-page' => url('admin/build/modules'))) . '</p>';
+      return $output;
+  }
+}
+
+
+/**
+ * Implementation of hook_theme().
+ */
+function dieta_recipe_theme($existing, $type, $theme, $path) {
+
+  return array(
+    'dieta_recipe_landing_page' => array(
+      'file' => 'dieta_recipe.landing.page.inc'
+    ),
+
+    // The ingredients sub-form on the recipe edit screen.
+    'ingredients_form' => array(
+      'render element' => 'form',
+    ),
+
+    'dieta_recipe_system_of_measurement' => array(
+      'render element' => 'form',
+    ),
+
+    'dieta_recipe_description' => array(
+      'function' => 'theme_dieta_recipe_description',
+      'variables' => array('node' => NULL),
+    ),
+
+    'dieta_recipe_summary' => array(
+      'function' => 'theme_dieta_recipe_summary',
+      'variables' => array('node' => NULL, 'show_title' => TRUE),
+    ),
+
+    'dieta_recipe_notes' => array(
+      'function' => 'theme_dieta_recipe_notes',
+      'variables' => array('node' => NULL),
+    ),
+
+    'dieta_recipe_instructions' => array(
+      'function' => 'theme_dieta_recipe_instructions',
+      'variables' => array('node' => NULL),
+    ),
+
+    'dieta_recipe_ingredients' => array(
+      'function' => 'theme_dieta_recipe_ingredients',
+      'variables' => array('node' => NULL),
+    ),
+
+    'dieta_recipe_ingredients_block_names' => array(
+//      'function' => 'theme_dieta_recipe_ingredients_block_names',
+      'template'  => 'tpl/dieta_recipe_ingredients_block_names',
+      'variables' => array('key' => NULL),
+    ),
+
+    'dieta_recipe_steps_time' => array(
+//      'function' => 'theme_dieta_recipe_ingredients_block_names',
+      'template'  => 'tpl/dieta_recipe_steps_time',
+      'variables' => array('key' => NULL),
+    ),
+  );
+}
+
+//Изменяем вывод формы для вывода сразу трех пунктов field_collection
+function dieta_recipe_menu_alter(&$items) {
+  $items['node/add/dieta-recipe']['page callback'] = 'dieta_recipe_build_form';
+}
+
+/**
+ * Implementation of hook_permission().
+ */
+function dieta_recipe_permission() {
+  return array(
+    'export dieta recipes' => array(
+      'title' => t('Export recipes'),
+      'description' => t('Export recipes in various formats.'),
+    ),
+    'import dieta recipes' => array(
+      'title' => t('Import recipes'),
+      'description' => t('Import recipes in various formats.'),
+    ),
+  );
+}
+
+
+/**
+ * Implementation of hook_load().
+ */
+function dieta_recipe_load($nodes) {
+
+  $result = db_query('SELECT * FROM {dieta_recipe} WHERE nid IN (:nids)', array(':nids' => array_keys($nodes)));
+  foreach ($result as $record) {
+    $nodes[$record->nid]->dieta_recipe_source = $record->source;
+    $nodes[$record->nid]->dieta_recipe_yield = $record->yield;
+    $nodes[$record->nid]->dieta_recipe_yield_unit = $record->yield_unit;
+    $nodes[$record->nid]->dieta_recipe_description = $record->description;
+    $nodes[$record->nid]->dieta_recipe_instructions = $record->instructions;
+    $nodes[$record->nid]->dieta_recipe_notes = $record->notes;
+    $nodes[$record->nid]->dieta_recipe_preptime = $record->preptime;
+    $nodes[$record->nid]->dieta_recipe_cooktime = $record->cooktime;
+    $nodes[$record->nid]->dieta_recipe_ingredients['ing'] = dieta_recipe_load_ingredients($record->nid);
+  }
+}
+
+/**
+ * Implementation of hook_link().
+ */
+function dieta_recipe_link($type, $node = NULL, $teaser = FALSE) {
+
+  $links = array();
+
+  if ($type == 'node' && $node->type == 'dieta_recipe') {
+    if (!$teaser) {
+      $formats = module_invoke_all('dieta_recipeio', 'export_single');
+      foreach ($formats as $key => $format) {
+        $perm = isset($format['access arguments']) ? $format['access arguments'] : 'export dieta recipes';
+        if (user_access($perm)) {
+          $links[$key] = array(
+            'title' => $format['format_name'],
+            'href' => "dieta_recipe/export/$key/$node->nid/__yield__",
+            'attributes' => array('title' => $format['format_help']),
+          );
+        }
+      }
+    }
+    if ( count($links) > 0 ) {
+      array_unshift($links, array('title' => '<br/>' . t('Export to') . ':', 'html' => TRUE));
+    }
+  }
+  return $links;
+}
+
+/**
+ * Implementation of hook_node_info().
+ */
+function dieta_recipe_node_info() {
+  return array(
+    'dieta_recipe' => array(
+      'name' => t('Recipe'),
+      'base' => 'dieta_recipe',
+      'description' => t('Share your favorite recipes with your fellow cooks.'),
+    )
+  );
+}
+
+
+/**
+ * Implementation of hook_insert().
+ *
+ * Insert a new recipe into the database.
+ */
+function dieta_recipe_insert($node) {
+  db_insert('dieta_recipe')
+    ->fields(array(
+      'nid' => $node->nid,
+      'source' => $node->dieta_recipe_source,
+      'yield' => $node->dieta_recipe_yield,
+      'yield_unit' => $node->dieta_recipe_yield_unit,
+      'description' => $node->dieta_recipe_description['value'],
+      'instructions' => $node->dieta_recipe_instructions['value'],
+      'notes' => $node->dieta_recipe_notes['value'],
+      'preptime' => $node->dieta_recipe_preptime,
+      'cooktime' => $node->dieta_recipe_cooktime,
+    ))
+    ->execute();
+
+  // Create new ingridients & save ingredient and recipe relations
+  $ingredients = dieta_recipe_save_ingredients($node);
+
+  // Save terms if taxonomy field  attached to recipe node type
+  dieta_recipe_save_taxonomy_terms($node, $ingredients);
+
+  // Synchronize node and ingridient values
+  dieta_recipe_ingredient_synchronize_fields($node, $ingredients);
+}
+
+
+/**
+ * Implementation of hook_update().
+ *
+ * As an existing node is being updated in the database, we need to do our own
+ * database updates.
+ */
+function dieta_recipe_update($node) {
+  db_update('dieta_recipe')
+    ->fields(array(
+      'source' => $node->dieta_recipe_source,
+      'yield' => $node->dieta_recipe_yield,
+      'yield_unit' => $node->dieta_recipe_yield_unit,
+      'description' => is_array($node->dieta_recipe_description) ? $node->dieta_recipe_description['value'] : $node->dieta_recipe_description,
+      'instructions' => is_array($node->dieta_recipe_instructions) ? $node->dieta_recipe_instructions['value'] : $node->dieta_recipe_instructions,
+      'notes' => is_array($node->dieta_recipe_notes) ? $node->dieta_recipe_notes['value'] : $node->dieta_recipe_notes,
+      'preptime' => $node->dieta_recipe_preptime,
+      'cooktime' => $node->dieta_recipe_cooktime,
+    ))
+    ->condition('nid', $node->nid)
+    ->execute();
+
+  // Create new ingridients & save ingredient and recipe relations
+  $ingredients = dieta_recipe_save_ingredients($node);
+
+  // Save terms if taxonomy field  attached to recipe node type
+  dieta_recipe_save_taxonomy_terms($node, $ingredients);
+
+  // Synchronize node and ingridient values
+  dieta_recipe_ingredient_synchronize_fields($node, $ingredients);
+}
+
+/**
+ * Saves the relation between taxonomy term and the node.
+ *
+ * @param $node
+ *   A node containing an ingredient list.
+ * @param $ingridients
+ *   An array containing list of taxonomy term ids.
+ */
+function dieta_recipe_save_taxonomy_terms($node, $ingredients) {
+  $language = 'und';
+    // get node field info, to find out field name attach terms
+  $instances = field_info_instances('node', 'dieta_recipe');
+  foreach ($instances as $field_name => $instance) {
+    $field = field_info_field($field_name);
+    // if field vocabulary vid is same as recipe ingredients vocabulary then act
+    if ($field['type'] == 'taxonomy_term_reference'
+      && $field['settings']['allowed_values'][0]['vocabulary'] == DIETA_RECIPE_TAXONOMY_VOCABULARY) {
+      // empty field to delete previous relations
+      $node->{$field_name}[$language] = array();
+      // append terms into node object
+      foreach ($ingredients as $id => $ingredient) {
+        array_push($node->{$field_name}[$language], array('tid' => $id));
+      }
+
+      break; // stop searching
+    }
+  }
+}
+
+/**
+ * Saves the ingredients of a recipe node to the database.
+ *
+ * @param $node
+ *   A node containing an ingredient list.
+ */
+function dieta_recipe_save_ingredients($node) {
+
+  $ingredients = array();
+  if (!$node->dieta_recipe_ingredients['ing']) {
+    $node->dieta_recipe_ingredients['ing'] = array();
+  }
+
+  foreach ($node->dieta_recipe_ingredients['ing'] as $key => $ingredient) {
+
+    // Delete, if you have a valid ri_id and the ingredient name is blank.
+    if (isset($ingredient['ri_id']) && empty($ingredient['name'])) {
+      db_delete('dieta_recipe_node_ingredient')
+        ->condition('id', $ingredient['ri_id'])
+        ->execute();
+    }
+
+    // Update, if you have a valid ri_id and the ingredient has a name.
+    elseif ( isset($ingredient['ri_id']) && $ingredient['name'] != '' ) {
+      $ingredient['id'] = dieta_recipe_ingredient_id_from_name($ingredient['name']);
+      $ingredient['term'] = taxonomy_term_load($ingredient['id']);
+      // You have to round it because an indefinite remainder will overflow the normal mysql float type.
+      $ingredient['quantity'] = round(dieta_recipe_ingredient_quantity_from_fraction($ingredient['quantity']), 6);
+
+      db_update('dieta_recipe_node_ingredient')
+        ->fields(array(
+          'ingredient_id' => $ingredient['id'],
+          'quantity' => $ingredient['quantity'],
+          'unit_key' => $ingredient['unit_key'],
+          'weight' => $ingredient['weight'],
+          'note' => $ingredient['note'],
+        ))
+        ->condition('id', $ingredient['ri_id'])
+        ->execute();
+
+      $ingredients[] = $ingredient;
+    }
+
+    // Add, if you don't have a valid ri_id and the ingredient has a name.
+    elseif (!isset($ingredient['ri_id']) && $ingredient['name'] != '' ) {
+      $ingredient['id'] = dieta_recipe_ingredient_id_from_name($ingredient['name']);
+      $ingredient['term'] = taxonomy_term_load($ingredient['id']);
+      // You have to round it because an indefinite remainder will overflow the normal mysql float type.
+      $ingredient['quantity'] = round(dieta_recipe_ingredient_quantity_from_fraction($ingredient['quantity']), 6);
+
+      db_insert('dieta_recipe_node_ingredient')
+        ->fields(array(
+          'nid' => $node->nid,
+          'ingredient_id' => $ingredient['id'],
+          'quantity' => $ingredient['quantity'],
+          'unit_key' => $ingredient['unit_key'],
+          'weight' => $ingredient['weight'],
+          'note' => $ingredient['note'],
+        ))
+        ->execute();
+
+      $ingredients[$ingredient['id']] = $ingredient;
+    }
+  }
+
+  return $ingredients;
+}
+
+
+/**
+ * Implementation of hook_delete().
+ *
+ * When a node is deleted, delete the recipe and recipe node ingredient links.
+ * Leave the ingredients.
+ */
+function dieta_recipe_delete($node) {
+  db_query("DELETE FROM {dieta_recipe} WHERE nid = :nid", array(':nid' => $node->nid));
+  db_query("DELETE FROM {dieta_recipe_node_ingredient} WHERE nid = :nid", array(':nid' => $node->nid));
+}
+
+
+/**
+* Implementation of hook_form().
+*/
+function dieta_recipe_form($node, &$form_state) {
+
+  // Title.
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Recipe name'),
+    '#required' => TRUE,
+    '#default_value' => !empty($node->title) ? $node->title : '',
+    '#maxlength' => 255,
+  );
+
+
+  // Special WYSIWYG Section for description, instructions, and notes.
+  $form['dieta_recipe_description'] = array(
+    '#title' => t('Description'),
+    '#type' => 'text_format',
+    '#format' => 'plain_text',
+    '#default_value' => !empty($node->dieta_recipe_description) ? $node->dieta_recipe_description : '',
+    '#cols' => 60,
+    '#rows' => 1,
+    '#description' => t('A short description or "teaser" for the recipe.'),
+    '#required' => TRUE,
+  );
+  $form['dieta_recipe_instructions'] = array(
+    '#title' => t('Instructions'),
+    '#type' => 'text_format',
+    '#format' => isset($node->format) ? $node->format : NULL,
+    '#default_value' => !empty($node->dieta_recipe_instructions) ? $node->dieta_recipe_instructions : '',
+    '#cols' => 60,
+    '#rows' => 10,
+    '#description' => t('Step by step instructions on how to prepare and cook the recipe.'),
+  );
+  $form['dieta_recipe_notes'] = array(
+    '#title' => t('Additional notes'),
+    '#type' => 'text_format',
+    '#format' => isset($node->format) ? $node->format : NULL,
+    '#default_value' => !empty($node->dieta_recipe_notes) ? $node->dieta_recipe_notes : '',
+    '#cols' => 60,
+    '#rows' => 5,
+    '#description' => t('Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe.'),
+  );
+  
+  $yield_values = array();
+  for ($i = 1; $i <= 8; $i++) {
+    $yield_values[$i] = $i;
+  }
+
+  $form['dieta_recipe_yield'] = array(
+    '#type' => 'select',
+    '#title' => t('Yield'),
+    '#default_value' => !empty($node->dieta_recipe_yield) ? $node->dieta_recipe_yield : '',
+    '#options' => $yield_values,
+    '#description' => t('The number of servings the recipe will make (whole number integer, ie 5 or 6).'),
+    '#required' => TRUE,
+  );
+
+  $form['dieta_recipe_yield_unit'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Yield Units'),
+    '#default_value' => empty($node->dieta_recipe_yield_unit) ? t('Servings') : $node->dieta_recipe_yield_unit,
+    '#size' => 16,
+    '#maxlength' => 64,
+    '#description' => t('The units for the yield field(ie servings, people, cans, cookies, etc).'),
+    '#required' => FALSE,
+  );
+
+  $form['dieta_recipe_ingredients'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => FALSE,
+    '#title' => t('Ingredients'),
+    '#tree' => TRUE,
+  );
+
+  // This is the autocomplete callback url.
+  $callback = 'dieta_recipe/ingredient/autocomplete';
+
+  if ( empty($node->dieta_recipe_ingredients['ing']) || !is_array($node->dieta_recipe_ingredients['ing']) ) {
+    $node->dieta_recipe_ingredients['ing'] = array();
+  }
+
+  # Figure out max weight so new ingredients will sort at the bottom by default.
+  $max_weight = 0;
+  foreach ($node->dieta_recipe_ingredients['ing'] as $id => $ingredient) {
+    if ($max_weight < $ingredient['weight']) {
+      $max_weight = $ingredient['weight'];
+    }
+  }
+
+  if (isset($form_state['add_ingredients']) || count($node->dieta_recipe_ingredients['ing']) == 0) {
+    unset($form_state['add_ingredients']);
+    $add_count = ($form_state['rebuild']) ? 1 : variable_get('dieta_recipe_add_more_count', 5);    
+    for ($delta = 0; $delta < $add_count; $delta++) {
+      array_push($node->dieta_recipe_ingredients['ing'], array('ri_id' => NULL, 'quantity' => '', 'unit_key' => '', 'name' => '', 'note' => '', 'weight' => $max_weight + $delta));
+    }
+  }
+
+  // Weights range from -delta to +delta, so delta should be at least half
+  // of the amount of blocks present. This makes sure all blocks in the same
+  // region get an unique weight.
+  $weight_delta = count($node->dieta_recipe_ingredients['ing']);
+
+  $unit_options = dieta_recipe_unit_options();
+
+  // Container for just the ingredients.
+  $form['dieta_recipe_ingredients']['ing'] = array(
+    '#prefix' => '<div id="ingredients-wrapper">',
+    '#suffix' => '</div>',
+    '#theme' => 'ingredients_form',
+  );
+
+  foreach ($node->dieta_recipe_ingredients['ing'] as $id => $ingredient) {
+
+    $form['dieta_recipe_ingredients']['ing'][$id]['ri_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $ingredient['ri_id'],
+    );
+
+    // Strange, but html_entity_decode() doesn't handle &frasl;
+    $form['dieta_recipe_ingredients']['ing'][$id]['quantity'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Quantity'),
+      '#desctiption' => t('Quantity'),
+      '#default_value' => preg_replace('/\&frasl;/', '/', dieta_recipe_ingredient_quantity_from_decimal($ingredient['quantity'], TRUE)),
+      '#size' => 8,
+      '#maxlength' => 8,
+      '#attributes' => array('class' => array('form-item-dieta-recipe-ingredients-quantity')),
+    );
+    $form['dieta_recipe_ingredients']['ing'][$id]['unit_key'] = array(
+      '#type' => 'select',
+      '#title' => t('Unit'),
+      '#desctiption' => t('Gramm'),
+      '#default_value' => $ingredient['unit_key'] != '' ? $ingredient['unit_key'] : '',
+      '#options' => $unit_options,
+      '#attributes' => array('class' =>array('form-item-dieta-recipe-ingredients-unit-key')),
+    );
+    
+    $products_block = theme('dieta_recipe_ingredients_block_names', array('key' => $id));
+       
+    $form['dieta_recipe_ingredients']['ing'][$id]['name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Name'),
+      '#desctiption' => t('Select a product'),
+      '#default_value' => $ingredient['name'],
+      '#size' => 25,
+      '#maxlength' => 128,
+//      '#autocomplete_path' => $callback,
+      '#attributes' => array('class' =>array('form-item-dieta-recipe-ingredients-name')),
+      '#suffix' => '<div class="ingredients-block-wrapper" id="ingredients-block-'.$id.'-wrapper">'.$products_block.'</div>',
+    );
+    $form['dieta_recipe_ingredients']['ing'][$id]['note'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Note'),
+      '#desctiption' => t('You can use lime instead of lemon'),
+      '#default_value' => $ingredient['note'],
+      '#size' => 40,
+      '#maxlength' => 255,
+      '#attributes' => array('class' =>array('form-item-dieta-recipe-ingredients-note')),
+    );
+    $form['dieta_recipe_ingredients']['ing'][$id]['weight'] = array(
+      '#type' => 'weight',
+      '#title' => t('Weight'),
+      '#default_value' => $ingredient['weight'],
+      '#delta' => $weight_delta,
+    );
+  }
+
+  // We name our button 'dieta_recipe_more_ingredients' to avoid conflicts with other modules using
+  // Ajax-enabled buttons with the id 'more'.
+  $form['dieta_recipe_ingredients']['dieta_recipe_more_ingredients'] = array(
+    '#type' => 'submit',
+    '#value' => t('More ingredients'),
+    '#description' => t("If the amount of boxes above isn't enough, click here to add more ingredients."),
+    '#weight' => 1,
+    '#submit' => array('dieta_recipe_more_ingredients_submit'),
+    '#limit_validation_errors' => array(),
+    '#ajax' => array(
+      'callback' => 'dieta_recipe_more_ingredients_js',
+      'wrapper' => 'ingredients-wrapper',
+      'effect' => 'fade',
+    ),
+  );
+
+  $message = array();
+  $vocabulary = dieta_recipe_ingredient_vocabulary();
+  if (empty($vocabulary)) {
+    $message[] = t('Please define taxonomy vocabularies in !link.', array('!link' => l(t('settings page'), 'admin/content/dieta_recipe')));
+  }
+  if (count($unit_options) <= 1) {
+    $message[] = t('Please define ingridient measurement units in !link.', array('!link' => l(t('settings'), 'admin/content/dieta_recipe')));
+  }
+  if (!empty($message)) {
+    $form['dieta_recipe_ingredients']['message'] = array(
+      '#type' => 'item',
+      '#markup' => theme('item_list', array('items' => $message)),
+    );
+    $form['dieta_recipe_ingredients']['ing']['#prefix'] = '<div id="ingredients-wrapper" style="display:none;">';
+    $form['dieta_recipe_ingredients']['dieta_recipe_more_ingredients']['#attributes'] = array('style' => 'display:none;');
+  }
+
+  $form['dieta_recipe_source'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Source'),
+    '#default_value' => !empty($node->dieta_recipe_source) ? $node->dieta_recipe_source : '',
+    '#size' => 60,
+    '#maxlength' => 127,
+    '#description' => t('Optional. Does anyone else deserve credit for this recipe?'),
+  );
+
+  $form['dieta_recipe_preptime'] = array(
+    '#type' => 'textfield',
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#title' => t('Preparation time'),
+    '#default_value' => !empty($node->dieta_recipe_preptime) ? $node->dieta_recipe_preptime : 0,
+    '#description' => t('How long does this recipe take to prepare, in <strong>minutes</strong>.  Utilize 0 for N/A.'),
+  );
+
+  $form['dieta_recipe_cooktime'] = array(
+    '#type' => 'textfield',
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#title' => t('Активное время'),
+    '#default_value' => !empty($node->dieta_recipe_cooktime) ? $node->dieta_recipe_cooktime : 0,
+    '#description' => t('How long does this recipe take to cook, in <strong>minutes</strong>. Utilize 0 for N/A.'),
+  );
+
+
+  //We still need the parent input format filter set.
+  //$form['filter'] = filter_form($node->format);
+  // Move the filter form down a bit.
+  //$form['filter']['#weight'] = 5;
+
+  $form['#after_build'][] = 'dieta_recipe_form_after_build';
+  
+  return $form;
+}
+
+function dieta_recipe_form_after_build($form, $form_state) {
+  $module_path = drupal_get_path('module', 'dieta_recipe');
+  drupal_add_js($module_path . '/js/dieta_recipe_ingredients_block_names.js');
+  drupal_add_css($module_path . '/css/dieta_recipe_ingredients_block_names.css');
+  
+  drupal_add_library('system', 'drupal.ajax');
+  drupal_add_library('system', 'jquery.form');
+  return $form;
+}
+
+function theme_ingredients_form($variables) {
+  $form = $variables['form'];
+
+  $header = array('', t('Quantity'), t('Units'), t('Ingredient name'), t('Processing/Notes'), t('Sort Weight'));
+  $rows = array();
+  drupal_add_tabledrag('ingredient-list', 'order', 'sibling', 'ingredient-weight');
+
+  foreach (element_children($form) as $key) {
+
+    // Skip the more ingredients button
+    if ( is_numeric($key) ) {
+
+      // Set special classes for drag and drop updating.
+      $form[$key]['weight']['#attributes']['class'] = array('ingredient-weight');
+
+      // Build the table row.
+      $row = array(
+        'data' => array(
+          array('class' => array('choice-flag')),
+          drupal_render($form[$key]['ri_id']) . drupal_render($form[$key]['quantity']),
+        ),
+        'class' => array('draggable'),
+      );
+      $row['data'][] = drupal_render($form[$key]['unit_key']);
+      $row['data'][] = drupal_render($form[$key]['name']);
+      $row['data'][] = drupal_render($form[$key]['note']);
+      $row['data'][] = drupal_render($form[$key]['weight']);
+      $rows[] = $row;
+    }
+  }
+
+  $output = theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'ingredient-list')));
+  $output .= drupal_render_children($form);
+
+  return $output;
+}
+
+
+/**
+ * Submit handler to add more ingredient rows.  It makes changes to the form state and the
+ * entire form is rebuilt during the page reload.
+ */
+function dieta_recipe_more_ingredients_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  // If they clicked the more ingredients button, set a form_state signal.
+  if ($form_state['values']['dieta_recipe_ingredients']['dieta_recipe_more_ingredients']) {
+    $form_state['add_ingredients'] = 1;
+  }
+}
+
+
+/**
+ * Ajax callback in response to new ingredients being added to the form.
+ *
+ * This returns the new page content to replace the page content made obsolete
+ * by the form submission.
+ *
+ * @see poll_more_choices_submit()
+ */
+function dieta_recipe_more_ingredients_js($form, $form_state) {
+  return $form['dieta_recipe_ingredients']['ing'];
+}
+
+
+/**
+ * Implementation of hook_menu().
+ *
+ * Note: when editing this function you must visit 'admin/menu' to reset the cache
+ */
+function dieta_recipe_menu() {
+
+  // Add a tab on the recipe add screen for Recipe Import.
+  // Need to add 'file path' because some modules render node/add/dieta_recipe/std
+  // even though they shouldn't.
+  $items['node/add/dieta_recipe/std'] = array(
+    'title' => 'Standard entry',
+    'weight' => 0,
+    'file path' => drupal_get_path('module', 'node'),
+    'type' => MENU_DEFAULT_LOCAL_TASK
+  );
+  $items['node/add/dieta_recipe/import'] = array(
+    'title' => 'Recipe Import',
+    'description' => 'Allows you to create a recipe by pasting various formats into a big text box.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('dieta_recipe_import_form'),
+    'access callback' => 'dieta_recipe_import_myaccess',
+    'access arguments' => array('import dieta recipes'),
+    'weight' => 1,
+    'type' => MENU_LOCAL_TASK
+  );
+
+  $items['dieta_recipe'] = array(
+    'title' => 'Recipes',
+    'page callback' => 'dieta_recipe_landing_page',
+    'access arguments' => array('access content'),
+    'file' => 'dieta_recipe.landing.page.inc'
+  );
+
+  $items['dieta_recipe/%/delete'] = array(
+    'page callback' => 'dieta_recipe_unit_delete',
+    'page arguments' => array(1),  // lower level permissions are handled in recipe_export
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('administer system configuration'),  // lower level permissions are handled in recipe_export
+  );
+
+  $items['dieta_recipe/ingredient/autocomplete'] = array(
+    'title' => 'Ingredient autocomplete',
+    'page callback' => 'dieta_recipe_autocomplete_page',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),
+  );
+
+  $items['dieta_recipe/export'] = array(
+    'page callback' => 'dieta_recipe_export',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),  // lower level permissions are handled in recipe_export
+  );
+
+  $items['dieta_recipe/add_product'] = array(
+    'page callback' => 'dieta_recipe_get_products_block_ajax_callback',
+    'page arguments' => array(), 
+  //  'delivery callback' => 'ajax_deliver', // данные, возвращённые ф-ей dieta_recipe_get_products_block_ajax_callback(), будут отданы в json формате
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),  // lower level permissions are handled in recipe_export
+  );
+
+
+
+  // Admin menus below here.
+  $items['admin/content/dieta_recipe'] = array(
+    'title' => 'Recipes',
+    'description' => 'Settings that control how the recipe module functions.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('dieta_recipe_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+    'file' => 'dieta_recipe.admin.inc',
+  );
+  $items['admin/content/dieta_recipe/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -1,
+  );
+  $items['admin/content/dieta_recipe/export_multi'] = array(
+    'title' => 'Bulk export',
+    'description' => 'Export all recipes from this site into a supported output format.  The data is returned directly to your web browser.  You can enable output formats on the modules screen.',
+    'page callback' => 'dieta_recipe_export_multi',
+    'access callback' => 'dieta_recipe_export_multi_myaccess',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+    'file' => 'dieta_recipe.admin.inc',
+  );
+  $items['admin/content/dieta_recipe/import_multi'] = array(
+    'title' => 'Bulk import',
+    'description' => 'Import recipes in a supported input format into this site.  The data is uploaded as a file to the server.  You can enable input formats on the modules screen.',
+    'page callback' => 'dieta_recipe_import_multi',
+    'access callback' => 'dieta_recipe_import_multi_myaccess',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK | MENU_NORMAL_ITEM,
+    'file' => 'dieta_recipe.admin.inc',
+  );
+
+
+  return $items;
+}
+
+
+/**
+ * Implementation of hook_node_access().
+
+function dieta_recipe_node_access($node, $op, $account) {
+
+  if ($op == 'create') {
+    return user_access('create recipe content', $account);
+  }
+
+  if ($op == 'update' || $op == 'delete') {
+    if ( (user_access('edit own recipe content', $account) && ($account->uid == $node->uid)) || user_access('edit any recipe content', $account)) {
+      return TRUE;
+    }
+  }
+}
+*/
+
+/*
+ * Block API
+ */
+function dieta_recipe_block_info() {
+  $blocks = array();
+  $blocks['recent'] = array(
+    'info' => t('Newest recipes'),
+  );
+  $blocks['summary'] = array(
+    'info' => t('dieta recipe summary'),
+  );
+  return $blocks;
+}
+function dieta_recipe_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'dieta_recent':
+      $result = db_select('node', 'n')
+        ->fields('n', array('nid', 'title', 'created'))
+        ->condition('type', 'dieta_recipe')
+        ->condition('status', 1)
+        ->orderBy('created', 'DESC')
+        ->range(0, 5)
+        ->execute();
+      if ($node_title_list = node_title_list($result)) {
+        $block['subject'] = t('Newest Recipes');
+        $block['content']['dieta_recipe_list'] = $node_title_list;
+        return $block;
+      }
+      break;
+
+    case 'summary':
+      if (user_access('access content')) {
+        if (arg(0) == 'node' && is_numeric(arg(1)) && (arg(2) == '' || arg(2) == 'view')) {
+          $node = node_load(arg(1));
+          if ( $node->type == 'dieta_recipe' ) {
+            $block['subject'] = variable_get('dieta_recipe_summary_title', t('Summary'));
+            $block['content'] = theme('dieta_recipe_summary', array('node' => $node, 'show_title' => FALSE, 'show_yield_form' => TRUE));
+            return $block;
+          }
+        }
+      }
+      break;
+  }
+}
+
+
+/**
+ * Implementation of hook_view().
+ */
+function dieta_recipe_view($node, $view_mode) {
+  drupal_add_css(drupal_get_path('module', 'dieta_recipe') . '/dieta_recipe.css');
+
+  if ($view_mode == 'full' && node_is_page($node)) {
+    $breadcrumb = array();
+    $breadcrumb[] = l(t('Home'), NULL);
+    $breadcrumb[] = l(t('Recipes'), 'dieta_recipe');
+    drupal_set_breadcrumb($breadcrumb);
+  }
+
+  // Prepare and sanitize node fields.
+  dieta_recipe_node_sanitize($node);
+
+  // Calculate yield and ingredient factor.
+
+  // Get custom yield or default to a factor of 1.
+  $node->dieta_recipe_yield = intval($node->dieta_recipe_yield);
+  // Factor is calculated and added into the $node variable.
+  $node->dieta_recipe_factor = 1;
+
+  // check post variable to see if the yield form was posted.
+  if ( $node->dieta_recipe_yield != 0 && isset($_POST['op'])) {
+    if ($_POST['op'] == t('Change')) {
+      $node->dieta_recipe_factor = $_POST['custom_yield'] / $node->dieta_recipe_yield;
+      $node->dieta_recipe_yield = $_POST['custom_yield'];
+      $_POST = array();
+    }
+    elseif ($_POST['op'] == t('Halve')) {
+      $node->dieta_recipe_factor = $_POST['custom_yield']/2 / $node->dieta_recipe_yield;
+      $node->dieta_recipe_yield = $_POST['custom_yield']/2;
+      $_POST = array();
+    }
+    elseif ($_POST['op'] == t('Double')) {
+      $node->dieta_recipe_factor = $_POST['custom_yield']*2 / $node->dieta_recipe_yield;
+      $node->dieta_recipe_yield = $_POST['custom_yield']*2;
+      $_POST = array();
+    }
+    // Reset yield back to recipe default
+    elseif ($_POST['op'] == t('Reset')) {
+      $_POST = array();
+    }
+  }
+  // Custom_yield comes from export single urls currently.
+  elseif (isset($node->dieta_recipe_custom_yield)) {
+    $node->dieta_recipe_factor = $node->dieta_recipe_custom_yield / $node->dieta_recipe_yield;
+    $node->dieta_recipe_yield = $node->dieta_recipe_custom_yield;
+  }
+
+
+  // If it is a teaser, you're done.
+  // The teaser should have a full $node object, but not the $node->content render array.
+  if ($view_mode == 'teaser') {
+    return $node;
+  }
+
+
+  // Begin filling the node->content array with with recipe items.
+  $node->content['dieta_recipe_description'] = array(
+      '#markup' => theme('dieta_recipe_description', array('node' => $node)),
+  );
+
+  $node->content['dieta_recipe_ingredients'] = array(
+      '#markup' => theme('dieta_recipe_ingredients', array('node' => $node)),
+  );
+
+  $node->content['dieta_recipe_instructions'] = array(
+      '#markup' => theme('dieta_recipe_instructions', array('node' => $node)),
+  );
+
+  // Don't show the notes box at all it there are no notes.
+  if ( $node->dieta_recipe_notes ) {
+    $node->content['dieta_recipe_notes'] = array(
+        '#markup' => theme('dieta_recipe_notes', array('node' => $node)),
+    );
+  }
+
+  if ( isset($node->in_preview) && $node->in_preview == 1 ) {
+    $node->dieta_recipe_show_yield_form = FALSE;
+  }
+  $node->content['dieta_recipe_summary_box'] = array(
+      '#markup' => theme('dieta_recipe_summary', array('node' => $node, 'show_yield_form' => isset($node->dieta_recipe_show_yield_form) ? $node->dieta_recipe_show_yield_form : TRUE)),
+  );
+  
+  // добавляем в js все поля рецепта, которые зависят от количества порций,
+  // чтобы их можно было пересчитывать в зависимости от выбираемого количества порций
+  // на странице рецепта
+  dieta_recipe_add_fields_values_to_js($node);
+  
+  // подключаем скрипт аякс вкладок рецепта
+  /*
+   *   @TODO   Такое(да и любое кроме как в функции dieta_recipe_view) подключение
+   *  js-скриптов не выполняет drupal.behaviors для обычных пользователей
+   *  Для админов и гостей все работает как и должно.
+   *  Если скрипт подключаем в функции dieta_recipe_view, то и для обычных пользователей тоже работает как должно.
+   */
+  $module_path = drupal_get_path('module', 'custom_recipe');
+  drupal_add_js($module_path . '/js/recipe_ajax_tabs.js');
+
+  return $node;
+}
+
+
+/**
+ * Implements hook_node_view().
+ */
+function dieta_recipe_node_view($node, $view_mode) {
+
+  if ( isset($node->in_preview) && $node->in_preview == 1 ) {
+    return;
+  }
+
+  if ($node->type == 'dieta_recipe' && $view_mode != 'rss' && $view_mode != 'teaser') {
+    $formats = module_invoke_all('dieta_recipeio', 'export_single');
+    $links = array();
+    foreach ($formats as $key => $format) {
+      $perm = isset($format['access arguments']) ? $format['access arguments'] : 'export recipes';
+      if (user_access($perm)) {
+        $links[$key] = array(
+          'title' => $format['format_name'],
+          'href' => "dieta_recipe/export/$key/$node->nid/" . $node->dieta_recipe_yield,
+          'attributes' => array('title' => $format['format_help']),
+        );
+      }
+    }
+
+    if (!empty($links)) {
+      array_unshift($links, array('title' => '<br/>' . t('Export to') . ':', 'html' => TRUE));
+      $node->content['links']['dieta_recipe'] = array(
+        '#theme' => 'links__dieta_recipe__node',
+        '#links' => $links,
+        '#attributes' => array('class' => array('links', 'inline')),
+      );
+    }
+  }
+}
+
+/**
+ * Implements HOOK_preprocess_HOOK()
+ * @param array $vars - массив с контентом материала
+ */
+function dieta_recipe_preprocess_node(&$vars) {
+  $node = &$vars['node'];
+  if ($node->type == 'dieta_recipe') {
+    // конвертируем время из минут в   часы и минуты
+    $time = convert_minutes_to_hours_and_minutes($node->dieta_recipe_cooktime);
+    $node->dieta_recipe_cooktime = $time['hours'] . 'ч. ' . $time['minutes'] . 'мин.';
+    
+    $time = convert_minutes_to_hours_and_minutes($node->dieta_recipe_preptime);
+    $node->dieta_recipe_preptime = $time['hours'] . 'ч. ' . $time['minutes'] . 'мин.';
+    
+    // округляем 
+    $field_product_price  = field_get_items('node', $node, 'field_product_price');
+    $field_caloric_effect = field_get_items('node', $node, 'field_caloric_effect');
+    $field_proteins       = field_get_items('node', $node, 'field_proteins');
+    $field_fats           = field_get_items('node', $node, 'field_fats');
+    $field_carbohydrates  = field_get_items('node', $node, 'field_carbohydrates');
+    $vars['content']['field_product_price'][0]['#markup']   = round((float)$field_product_price[0]['value'],  0) . ' руб.';
+		$vars['content']['field_caloric_effect'][0]['#markup']  = round($field_caloric_effect[0]['value'],        0) . ' ккал';
+		$vars['content']['field_proteins'][0]['#markup']        = round($field_proteins[0]['value'],              0) . ' мг';
+		$vars['content']['field_fats'][0]['#markup']            = round($field_fats[0]['value'],                  0) . ' мг';
+		$vars['content']['field_carbohydrates'][0]['#markup']   = round($field_carbohydrates[0]['value'],         0) . ' мг';
+  }
+}
+
+function convert_minutes_to_hours_and_minutes($minutes) {
+  $hours  = floor($minutes/60); //round down to nearest minute. 
+  $minutes = $minutes % 60;
+  
+  return array('hours' => $hours, 'minutes' => $minutes);
+}
+
+/*
+ * добавляем в js все поля рецепта, которые зависят от количества порций,
+ * чтобы их можно было пересчитывать в зависимости от выбираемого количества порций
+ * на странице рецепта
+ */
+function dieta_recipe_add_fields_values_to_js(&$node) {
+  $module_path = drupal_get_path('module', 'dieta_recipe');
+//  dsm($node);
+  $ings = array();
+  $portions = $node->dieta_recipe_yield;
+  foreach ($node->dieta_recipe_ingredients['ing'] as $i => $ing) {
+    $ing['quantity_of_one_portion'] = round( ($ing['quantity'] / $portions), 1 );
+    $ings[] = $ing;
+  }
+  
+  $price_of_one_portion = round( ($node->field_product_price['und'][0]['value'] / $portions), 2 );
+  
+  $field_caloric_effect_of_one_portion = round( ($node->field_caloric_effect['und'][0]['value']), 0 );
+  $field_carbohydrates_of_one_portion  = round( ($node->field_carbohydrates['und'][0]['value']), 2 );
+  $field_fats_of_one_portion           = round( ($node->field_fats['und'][0]['value']), 2 );
+  $field_proteins_of_one_portion       = round( ($node->field_proteins['und'][0]['value']), 2 );
+  
+  drupal_add_js(
+    array(
+      'dieta_recipe' => array(
+          'ingredients' => $ings,
+          'portions'    => $portions,
+          'price_of_one_portion' => $price_of_one_portion, 
+          'field_caloric_effect_of_one_portion'=> $field_caloric_effect_of_one_portion, 
+          'field_carbohydrates_of_one_portion' => $field_carbohydrates_of_one_portion, 
+          'field_fats_of_one_portion'          => $field_fats_of_one_portion, 
+          'field_proteins_of_one_portion'      => $field_proteins_of_one_portion, 
+      )
+    ), 
+    array('type' => 'setting')
+  );
+  drupal_add_js($module_path . '/js/dieta_recipe_calculate_by_portions_count.js');
+  
+  // добавляем интерактивный ползунок управлением количеством порций
+  drupal_add_js($module_path .  '/js/dieta_recipe_portions_slider.js');
+  drupal_add_css($module_path . '/css/dieta_recipe_slider.css');
+}
+
+function theme_dieta_recipe_ingredients($variables) {
+  $node = $variables['node'];
+  $output = "\n" . '<div class="dieta-recipe-ingredients dieta-recipe-section">';
+  $output .= '<h2 class="title">' . t('Ingredients') . '</h2>';
+
+  $unit_list = dieta_recipe_get_units();
+
+  // Construct the $ingredients[] array.
+  if ($node->dieta_recipe_ingredients['ing'] != NULL) {
+    $output .= '<div class="section">';
+    foreach ($node->dieta_recipe_ingredients['ing'] as $ingredient) {
+      if (isset($ingredient['quantity']) && $ingredient['name']) {
+        if (!isset($ingredient['abbreviation']) && isset($unit_list[$ingredient['unit_key']])) {
+          $ingredient['abbreviation'] = $unit_list[$ingredient['unit_key']]->abbreviation;
+        }
+        if (empty($ingredient['abbreviation'])) {
+          $ingredient['abbreviation'] = '&nbsp;';
+        }
+
+        // In preview mode the quantity are plain text fractions and should not be multiplied.
+
+        //if ( !$node->in_preview ) {
+          if ($ingredient['quantity'] > 0) {
+            $ingredient['quantity'] *= $node->dieta_recipe_factor;
+          }
+          else {
+            $ingredient['quantity'] = '&nbsp;';
+          }
+          if (variable_get('dieta_recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
+            $ingredient['quantity'] = dieta_recipe_ingredient_quantity_from_decimal($ingredient['quantity']);
+          }
+        //}
+
+        if (!empty($ingredient['link'])) {
+          $ingredient['name'] = l($ingredient['name'], 'node/' . $ingredient['link']);
+        }
+
+        $units = '';
+        if (isset($unit_list[$ingredient['unit_key']])) {
+          // Print the singular or plural term depending on the quantity.
+          $title = $ingredient['quantity'] > 1 ? $unit_list[$ingredient['unit_key']]->plural : $unit_list[$ingredient['unit_key']]->name;
+        }
+        else {
+          $title = $ingredient['unit_key'];
+        }
+        // Print the abbreviation if recipe_unit_display says to or the abbreviation is blank (ie = Unit, which we don't print).
+        if ( variable_get('dieta_recipe_unit_display', 0) == 0 || $ingredient['abbreviation'] == '&nbsp;') {
+          $units = '<abbr ' . drupal_attributes(array('title' => $title)) . '>' . $ingredient['abbreviation'] . '</abbr>';
+        }
+        else {
+          $units = $title;
+        }
+        $fullingredient = strlen($ingredient['note']) > 0 ? $ingredient['name'] . ' (' . $ingredient['note'] . ')' : $ingredient['name'];
+
+
+        $output .= "\n" . '<div rel="schema:ingredient"><div typeof="schema:Ingredient"><div class="quantity-unit" property="schema:amount"><span class="quantity"> ' . $ingredient['quantity'] . '</span> <span class="units">' . $units . '</span></div> <span class="ingredient-name" property="schema:name">' . $fullingredient . '</span></div></div>';
+      }
+    }
+    $output .= '</div>';
+  }
+  $output .= '</div>';
+  return $output;
+}
+
+
+/**
+ * Default theme implementation for the recipe description field.
+ */
+function theme_dieta_recipe_description($variables) {
+  $node = $variables['node'];
+
+  // Wrap description in RDFa markup.
+  if ( !empty($node->rdf_mapping['dieta_recipe_description']) ) {
+    $attributes = rdf_rdfa_attributes($node->rdf_mapping['dieta_recipe_description']);
+    $attributes['class'] = array('dieta_recipe-section');
+    $node->dieta_recipe_description = theme('rdf_template_variable_wrapper', array('content' => $node->dieta_recipe_description, 'attributes' => $attributes, 'inline' => FALSE));
+  }
+
+  $output = '<div class="dieta-recipe-description recipe-section">';
+  $output .= '<h2 class="title">' . t('Description') . '</h2>';
+  $output .= '<div class="section">' . $node->dieta_recipe_description . '</div>';
+  $output .= '</div>';
+  return $output;
+}
+
+
+/**
+ * Default theme implementation for the recipe notes field.
+ */
+function theme_dieta_recipe_notes($variables) {
+  $node = $variables['node'];
+  $output = '<div class="dieta-recipe-notes dieta-recipe-section">';
+  $output .= '<h2 class="title">' . t('Notes') . '</h2>';
+  $output .= '<div class="section">' . $node->dieta_recipe_notes . '</div>';
+  $output .= '</div>';
+  return $output;
+}
+
+
+/**
+ * Default theme implementation for the recipe instructions field.
+ */
+function theme_dieta_recipe_instructions($variables) {
+  $node = $variables['node'];
+
+  // Wrap instructions in RDFa markup.
+  if ( !empty($node->rdf_mapping['dieta_recipe_instructions']) ) {
+    $attributes = rdf_rdfa_attributes($node->rdf_mapping['dieta_recipe_instructions']);
+    $attributes['class'] = array('dieta_recipe-section');
+    $node->dieta_recipe_instructions = theme('rdf_template_variable_wrapper', array('content' => $node->dieta_recipe_instructions, 'attributes' => $attributes, 'inline' => FALSE));
+  }
+
+  $output = '<div class="dieta-recipe-instructions dieta-recipe-section">';
+  $output .= '<h2 class="title">' . t('Instructions') . '</h2>';
+  $output .= '<div class="section">' . $node->dieta_recipe_instructions . '</div>';
+  $output .= '</div>';
+  return $output;
+}
+
+
+/**
+ * Default theme implementation for the recipe summary box.
+ */
+function theme_dieta_recipe_summary($variables) {
+
+  $node = $variables['node'];
+  $show_title = isset($variables['show_title']) ? $variables['show_title'] : FALSE;
+  $show_yield_form = isset($variables['show_yield_form']) ? $variables['show_yield_form'] : TRUE;
+  // Construct the summary
+  $output = '<div class="dieta-recipe-summary">';
+
+  if ( $show_title ) {
+    $output .= '<h2 class="title">' . t('Summary') . '</h2>';
+  }
+
+  $output .= '<table>';
+
+  // Render the yield form.
+  $yield_form = drupal_get_form('dieta_recipe_yield_form', $node, $show_yield_form);
+  $output .= '<tr><th class="summary-title">' . t('Yield') . '</th><td class="summary-data">' . drupal_render($yield_form) . '</td></tr>';
+
+  if ($node->dieta_recipe_source) {
+    $output .= '<tr><th>' . t('Source') . '</th><td>' . $node->dieta_recipe_source . '</td></tr>';
+  }
+  if (isset($node->dieta_recipe_preptime)) {
+    $_o_minutes = $node->dieta_recipe_preptime;
+    $_hours = floor($_o_minutes / 60);
+    $_minutes = $_o_minutes - ($_hours * 60);
+    $_text = '';
+    if ($_hours > 0) {
+      $_text = format_plural($_hours, '1 hour', '@count hours');
+    }
+    if ($_minutes > 0) {
+      if (strlen($_text) > 0) {
+        $_text .= ', ';
+      }
+      $_text .= format_plural($_minutes, '1 minute', '@count minutes');
+    }
+
+
+    // Wrap description in RDFa markup.
+    if ( !empty($node->rdf_mapping['dieta_recipe_preptime']) ) {
+      $attributes = rdf_rdfa_attributes($node->rdf_mapping['dieta_recipe_preptime']);
+      $attributes['content'] = array(dieta_recipe_duration_iso8601($_o_minutes));
+      $_text = theme('rdf_template_variable_wrapper', array('content' => $_text, 'attributes' => $attributes, 'inline' => FALSE));
+    }
+
+    $output .= '<tr><th>' . t('Общее время') . '</th><td>' . $_text . '</td></tr>';
+  }
+
+  if (isset($node->dieta_recipe_cooktime)) {
+    $_o_minutes = $node->dieta_recipe_cooktime;
+    $_hours = floor($_o_minutes / 60);
+    $_minutes = $_o_minutes - ($_hours * 60);
+    $_text = '';
+    if ($_hours > 0) {
+      $_text = format_plural($_hours, '1 hour', '@count hours');
+    }
+    if ($_minutes > 0) {
+      if (strlen($_text) > 0) {
+        $_text .= ', ';
+      }
+      $_text .= format_plural($_minutes, '1 minute', '@count minutes');
+    }
+
+    // Wrap description in RDFa markup.
+    if ( !empty($node->rdf_mapping['dieta_recipe_cooktime']) ) {
+      $attributes = rdf_rdfa_attributes($node->rdf_mapping['dieta_recipe_cooktime']);
+      $attributes['content'] = array(dieta_recipe_duration_iso8601($_o_minutes));
+      $_text = theme('rdf_template_variable_wrapper', array('content' => $_text, 'attributes' => $attributes, 'inline' => FALSE));
+    }
+
+    $output .= '<tr><th>' . t('Активное время') . '</th><td>' . $_text . '</td></tr>';
+  }
+
+  if (isset($node->dieta_recipe_cooktime) && isset($node->dieta_recipe_preptime)) {
+    $_o_minutes = $node->dieta_recipe_cooktime + $node->dieta_recipe_preptime;
+    $_hours = floor($_o_minutes / 60);
+    $_minutes = $_o_minutes - ($_hours * 60);
+    $_text = '';
+    if ($_hours > 0) {
+      $_text = format_plural($_hours, '1 hour', '@count hours');
+    }
+    if ($_minutes > 0) {
+      if (strlen($_text) > 0) {
+        $_text .= ', ';
+      }
+      $_text .= format_plural($_minutes, '1 minute', '@count minutes');
+    }
+
+    // Wrap description in RDFa markup.
+    if ( !empty($node->rdf_mapping['dieta_recipe_totaltime']) ) {
+      $attributes = rdf_rdfa_attributes($node->rdf_mapping['dieta_recipe_totaltime']);
+      $attributes['content'] = array(dieta_recipe_duration_iso8601($_o_minutes));
+      $_text = theme('rdf_template_variable_wrapper', array('content' => $_text, 'attributes' => $attributes, 'inline' => FALSE));
+    }
+
+    $output .= '<tr><th>' . t('Total time') . '</th><td>' . $_text . '</td></tr>';
+  }
+
+  $output .= '</table>';
+  $output .= '</div>';
+
+  return $output;
+}
+
+
+/**
+ * Returns a cached array of recipe unit types
+ */
+function dieta_recipe_unit_options() {
+  $units = dieta_recipe_get_units();
+
+  // Put in a blank so non-matching units will not validate and save.
+  $options = array(''=>'');
+
+  foreach ($units as $unit_key => $unit) {
+    $text = $unit->name;
+    if (!empty($unit->abbreviation)) {
+      $text .= ' (' . $unit->abbreviation . ')';
+    }
+    $options[$unit_key] = $text;
+  }
+
+  return $options;
+}
+
+/**
+ * Converts a recipe ingredient name to and ID
+ */
+function dieta_recipe_ingredient_id_from_name($name) {
+  static $cache;
+
+  if (!isset($cache[$name])) {
+    $terms = taxonomy_get_term_by_name($name, DIETA_RECIPE_TAXONOMY_VOCABULARY);
+
+    if (!empty($terms)) {
+      $term = reset($terms);
+    }
+    else {
+      $term = new stdClass;
+      $term->vid = (int) dieta_recipe_ingredient_vocabulary();
+      $term->name = trim(strtolower($name));
+      $term->parent = dieta_recipe_ingredient_default_parent_term();
+
+      taxonomy_term_save($term);
+    }
+    $cache[$name] = $term->tid;
+  }
+
+  return $cache[$name];
+}
+
+/**
+ * Get default parent term for each new ingredient.
+ */
+function dieta_recipe_ingredient_default_parent_term() {
+  $term_id = variable_get('dieta_recipe_ingredient_default_parent_term', 0);
+
+  if (!$term_id) {
+    $term = new stdClass;
+    $term->vid = (int) dieta_recipe_ingredient_vocabulary();
+    $term->name = t('New ingredients');
+    $term->weight = -51;
+
+    taxonomy_term_save($term);
+
+    $term_id = $term->tid;
+    variable_set('dieta_recipe_ingredient_default_parent_term', $term_id);
+  }
+
+  return $term_id;
+}
+
+/**
+ * Converts an ingredient's quantity from decimal to fraction
+ */
+function dieta_recipe_ingredient_quantity_from_decimal($ingredient_quantity, $edit_mode=FALSE) {
+  if (strpos($ingredient_quantity, '.') && variable_get('dieta_recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
+    $decimal = abs($ingredient_quantity);
+    $whole = floor($decimal);
+    $numerator = 0;
+    $denominator = 1;
+    $top_heavy = 0;
+
+    $power = 1;
+    $flag = 0;
+    while ($flag == 0) {
+      $argument = $decimal * $power;
+      if ($argument == floor($argument)) {
+        $flag = 1;
+      }
+      else {
+        $power = $power * 10;
+      }
+    }
+
+
+    // We have to workaround for repeating, non-exact decimals for thirds, sixths, ninths, twelfths.
+    $overrides = array(
+      '3333' => array(1, 3), '6666' => array(2, 3), '9999' => array(3, 3), // thirds
+      '1666' => array(1, 6), '8333' => array(5, 6), // sixths
+      '1111' => array(1, 9), '2222' => array(2, 9), '4444' => array(4, 9), '5555' => array(5, 9), '7777' => array(7, 9), '8888' => array(8, 9), // ninths
+      '0833' => array(1, 12), '4166' => array(5, 12), '5833' => array(7, 12), '9166' => array(11, 12), // twelfths
+    );
+    // truncate the whole part to get just the fractional part
+    $conversionstr = substr((string) ($decimal - floor($decimal)), 2, 4);
+    if (array_key_exists($conversionstr, $overrides)) {
+      if ($overrides[$conversionstr][0] == $overrides[$conversionstr][1]) {
+          return ($whole + 1);
+      }
+      $denominator = $overrides[$conversionstr][1];
+      $numerator   = (floor($decimal) * $denominator) + $overrides[$conversionstr][0];
+    }
+    else {
+      $numerator = $decimal * $power;
+      $denominator = $power;
+    }
+
+
+    // repeating decimals have been corrected
+    $gcd = greatest_common_divisor($numerator, $denominator);
+
+    $numerator = $numerator/$gcd;
+    $denominator = $denominator/$gcd;
+    $top_heavy = $numerator;
+
+    $numerator = abs($top_heavy) - (abs($whole) * $denominator);
+
+    $ingredient_quantity = sprintf(variable_get('dieta_recipe_fraction_display', t('{%d} %d&frasl;%d')), $whole, $numerator, $denominator);
+
+    if (($whole == 0) && (strpos($ingredient_quantity, '{') >= 0)) {
+      // Remove anything in curly braces.
+      $ingredient_quantity = preg_replace('/{.*}/', '', $ingredient_quantity);
+    }
+    else {
+      // Remove just the curly braces, but keep everything between them.
+      $ingredient_quantity = preg_replace('/{|}/', '', $ingredient_quantity);
+    }
+
+    // In edit mode we don't want to show html tags like <sup> and <sub>.
+    if ( $edit_mode ) {
+      $ingredient_quantity = strip_tags($ingredient_quantity);
+    }
+  }
+
+  return filter_xss_admin(trim($ingredient_quantity));
+}
+
+/**
+ * Find the greatest common divisor
+ */
+function greatest_common_divisor($a, $b) {
+  while ( $b != 0) {
+    $remainder = $a % $b;
+    $a = $b;
+    $b = $remainder;
+  }
+  return abs($a);
+}
+
+
+/**
+ * Converts an ingredient's quantity from fractions to decimal.
+ */
+function dieta_recipe_ingredient_quantity_from_fraction($ingredient_quantity) {
+
+  // Replace a dash separated fraction with a ' ' to normalize the input string.
+  $ingredient_quantity = preg_replace('/^(\d+)[\-](\d+)[\/](\d+)/', '${1} ${2}/${3}', $ingredient_quantity);
+
+  if ($pos_slash = strpos($ingredient_quantity, '/')) {
+    $pos_space = strpos($ingredient_quantity, ' ');
+
+    // Can't trust $pos_space to be a zero value if there is no space
+    // so set it explicitly.
+    if ($pos_space === FALSE) {
+      $pos_space = 0;
+    }
+
+    $whole = substr($ingredient_quantity, 0, $pos_space);
+    $numerator = substr($ingredient_quantity, $pos_space, $pos_slash);
+    $denominator = substr($ingredient_quantity, $pos_slash + 1);
+    $ingredient_quantity = $whole+($numerator/$denominator);
+  }
+
+  return $ingredient_quantity;
+}
+
+
+/**
+ * Loads the ingredients for a recipe
+ */
+function dieta_recipe_load_ingredients($nid) {
+  $select = db_select('dieta_recipe_node_ingredient', 'ri');
+  $select->join('taxonomy_term_data', 'i', 'ri.ingredient_id = i.tid');
+  $select->addField('ri', 'id', 'ri_id');
+  $select->addField('i', 'name');
+  $select->addField('ri', 'note');
+  $select->addField('ri', 'quantity');
+  $select->addField('ri', 'unit_key');
+  $select->addField('ri', 'weight');
+  $select->addField('ri', 'ingredient_id');
+  $select->condition('ri.nid', $nid);
+  $select->orderBy('ri.weight', 'ASC');
+
+  $ingredients = array();
+  $result = $select->execute()->fetchAll(PDO::FETCH_ASSOC);
+  foreach ($result as $record) {
+    $ingredients[] = $record;
+  }
+
+  return $ingredients;
+}
+
+
+/**
+ * Menu callback; Generates various representation of a recipe page with
+ * all descendants and prints the requested representation to output.
+ *
+ * @param type
+ *   - a string encoding the type of output requested.
+ * @param nid
+ *   - an integer representing the node id (nid) of the node to export
+ */
+function dieta_recipe_export($type = 'html', $nid = NULL, $yield = NULL) {
+  // normalize typed urls
+  $type = drupal_strtolower($type);
+
+  // load supported formats
+  $formats = module_invoke_all('dieta_recipeio', 'export_single');
+  $perm = isset($formats[$type]['access arguments']) ? $formats[$type]['access arguments'] : 'export dieta recipes';
+  if (!user_access($perm)) {
+    drupal_access_denied();
+    return;
+  }
+
+  // If callback exists, call it, otherwise error out.
+  if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
+    echo call_user_func($formats[$type]['callback'], $nid, $yield);
+  }
+  else {
+    drupal_set_message(t('Unknown export format(%the_format).', array('%the_format' => $type)), 'error');
+    drupal_not_found();
+  }
+}
+
+
+/**
+ * Callback function for ingredient autocomplete
+ */
+function dieta_recipe_autocomplete_page($string = "", $limit = 10) {
+  $matches = array();
+  $result = db_query("SELECT tid, name FROM {taxonomy_term_data} WHERE vid = :vid AND LOWER(name) LIKE :name AND tid NOT IN (SELECT parent FROM {taxonomy_term_hierarchy} GROUP BY parent) ORDER BY name LIMIT $limit", array(':vid' => (int) dieta_recipe_ingredient_vocabulary(), ':name' => strtolower($string) . '%'));
+  foreach ($result as $term) {
+    $matches[$term->name] = check_plain($term->name);
+  }
+  drupal_json_output($matches);
+  exit();
+}
+
+/**
+ * Implementation of hook_validate().
+ *
+ * Errors should be signaled with form_set_error().
+ */
+function dieta_recipe_validate($node, $form, &$form_state) {
+  $return = TRUE;
+  if (!is_numeric($form_state['values']['dieta_recipe_yield']) || $form_state['values']['dieta_recipe_yield'] <=0) {
+    form_set_error('dieta_recipe_yield', t('Yield must be a valid positive integer.'));
+    $return = FALSE;
+  }
+
+  foreach ($form_state['values']['dieta_recipe_ingredients']['ing'] as $key => $ingredient) {
+    if (empty($ingredient['unit_key']['#value']) && !empty($ingredient['name']['#value'])) {
+      form_set_error("recipe_ingredients][ing][$key][unit_key", t("You must choose a valid unit."));
+      $return = FALSE;
+    }
+  }
+
+  if (!is_numeric($form_state['values']['dieta_recipe_preptime']) || $form_state['values']['dieta_recipe_preptime'] < 0) {
+    form_set_error('dieta_recipe_preptime', t('Preparation time must be a valid positive integer. Utilize 0 for N/A.'));
+    $return = FALSE;
+  }
+  if (!is_numeric($form_state['values']['dieta_recipe_cooktime']) || $form_state['values']['dieta_recipe_cooktime'] < 0) {
+    form_set_error('dieta_recipe_cooktime', t('Cooking time must be a valid positive integer. Utilize 0 for N/A.'));
+    $return = FALSE;
+  }
+
+  return $return;
+}
+
+
+
+
+
+/**
+ * All recipe fields should be run through one of the drupal data checks.
+ */
+function dieta_recipe_node_sanitize(&$node) {
+
+  // NOTE: This is a kludge because we should be saving each field's format is a table.
+  // Drupal7 no longer does this for us.
+  $filter_formats = filter_formats();
+  $filter_format_id = NULL;
+  if ( isset($filter_formats['filtered_html']) ) {
+    $filter_format_id = 'filtered_html';
+  }
+  elseif ( isset($filter_formats['1']) ) {
+    // Sites converted from Drupal6 will have a '1' instead of 'filtered_html'.
+    $filter_format_id = '1';
+  }
+
+  // Preview uses a render array for WYSIWYG fields.
+  if (isset($node->in_preview) && $node->in_preview == 1) {
+    $node->dieta_recipe_description = $node->dieta_recipe_description['value'];
+    $node->dieta_recipe_instructions = $node->dieta_recipe_instructions['value'];
+    $node->dieta_recipe_notes = $node->dieta_recipe_notes['value'];
+  }
+
+  // Handle WYSIWYG fields first.
+  if (!empty($node->dieta_recipe_description)) {
+    $node->dieta_recipe_description = check_markup($node->dieta_recipe_description, $filter_format_id);
+  }
+
+  if (!empty($node->dieta_recipe_instructions)) {
+    $node->dieta_recipe_instructions = check_markup($node->dieta_recipe_instructions, $filter_format_id);
+  }
+
+  if (!empty($node->dieta_recipe_notes)) {
+    $node->dieta_recipe_notes = check_markup($node->dieta_recipe_notes, $filter_format_id);
+  }
+
+
+
+
+  // Handle the rest of the recipe table fields.
+  if (!empty($node->dieta_recipe_source)) {
+    $node->dieta_recipe_source = filter_xss($node->dieta_recipe_source, array('a'));
+  }
+  if (!empty($node->dieta_recipe_yield_unit)) {
+    $node->dieta_recipe_yield_unit = filter_xss($node->dieta_recipe_yield_unit, array());
+  }
+
+  // Handle the ingredient fields.
+  if (isset($node->dieta_recipe_ingredients['ing'])) {
+    $tmp = $node->dieta_recipe_ingredients['ing'];
+    $node->dieta_recipe_ingredients['ing'] = array();
+    foreach ($tmp as $ingredient) {
+
+      // Skip the more ingredients button which shows up during the node rebuild in preview.
+      if (is_scalar($ingredient)) {
+        continue;
+      }
+
+      if (isset($ingredient['name'])) {
+        $ingredient['name'] = filter_xss($ingredient['name'], array());
+      }
+      if (isset($ingredient['unit_key'])) {
+        $ingredient['unit_key'] = filter_xss($ingredient['unit_key'], array());
+      }
+      if (isset($ingredient['note'])) {
+        $ingredient['note'] = filter_xss($ingredient['note'], array());
+      }
+      $node->dieta_recipe_ingredients['ing'][] = $ingredient;
+    }
+  }
+}
+
+
+function dieta_recipe_yield_form($form, &$form_state, $node, $show_yield_form) {
+  // Don't render the custom yield textbox and submit buttons if disabled or shown in a block.
+
+  if ($show_yield_form == FALSE || variable_get('dieta_recipe_summary_location', 0) == 1 ) {
+    $form['yield'] = array(
+      '#markup' => $node->dieta_recipe_yield,
+    );
+    // An html space is useful here since we don't have a separate theme function for this form.
+    $form['_space'] = array(
+      '#markup' => '&nbsp;',
+    );
+    $form['yield_unit'] = array(
+      '#markup' => ($node->dieta_recipe_yield_unit == '')?t('Servings'):$node->dieta_recipe_yield_unit,
+    );
+  }
+
+  // Render the custom yield textbox and submit buttons.
+  else {
+    $form['custom_yield'] = array(
+      '#type' => 'textfield',
+      '#default_value' => $node->dieta_recipe_yield,
+      '#size' => 2,
+      '#maxlength' => 4,
+      '#attributes' => array('class' => array('dieta-recipe-yield-value')),
+    );
+    $form['yield_unit'] = array(
+      '#markup' => ($node->dieta_recipe_yield_unit == '')?t('Servings'):$node->dieta_recipe_yield_unit,
+      '#suffix' => '<br/>',
+    );
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Change'),
+      '#attributes' => array('class' => array('dieta-recipe-yield-change')),
+    );
+    $form['reset'] = array(
+      '#type' => 'submit',
+      '#value' => t('Reset'),
+      '#attributes' => array('class' => array('dieta-recipe-yield-reset')),
+    );
+    $form['halve'] = array(
+      '#type' => 'submit',
+      '#value' => t('Halve'),
+      '#attributes' => array('class' => array('dieta-recipe-yield-halve')),
+    );
+    $form['double'] = array(
+      '#type' => 'submit',
+      '#value' => t('Double'),
+      '#attributes' => array('class' => array('dieta-recipe-yield-double')),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Form recipe_import_form
+ */
+function dieta_recipe_import_form($form, &$form_state) {
+
+  $formats = module_invoke_all('dieta_recipeio', 'import_single');
+
+  $options = array();
+  foreach ($formats as $format) {
+    $options[$format['callback']] = $format['format_name'];
+  }
+
+  // Some special stuff when previewing a node.
+  if (isset($form_state['node_preview'])) {
+    $form['#prefix'] = $form_state['node_preview'];
+  }
+
+  $form['dieta_recipe_format'] = array(
+    '#type' => 'select',
+    '#title' => t('Recipe format'),
+    '#options' => $options,
+    '#default_value' => !empty($form_state['values']['dieta_recipe_format']) ? $form_state['values']['dieta_recipe_format'] : '',
+    '#size' => 1,
+    '#description' => t('The recipe input format.'),
+  );
+
+  $form['dieta_recipe_import_text'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Paste import data here'),
+    '#default_value' => !empty($form_state['values']['dieta_recipe_import_text']) ? $form_state['values']['dieta_recipe_import_text'] : '',
+    '#cols' => 55,
+    '#rows' => 8,
+    '#required' => TRUE,
+    '#description' => t('Use 1 blank line between sections: Description, Ingredients, Instructions, Notes. Always use preview first to avoid unintended consequences.'),
+    '#attributes' => array('class' => array('dieta-recipe-import-text')),
+  );
+
+  $form['buttons']['preview'] = array(
+    '#type' => 'submit',
+    '#value' => t('Preview'),
+    '#weight' => 1,
+    '#submit' => array('dieta_recipe_import_form_build_preview'),
+  );
+
+  $form['buttons']['import'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import'),
+    '#weight' => 2,
+    '#submit' => array('dieta_recipe_import_form_submit'),
+  );
+
+  return $form;
+}
+
+
+/**
+ * Import preview routine that allows that users to see what actually will be imported before doing so.
+ */
+function dieta_recipe_import_form_build_preview($form, &$form_state) {
+  drupal_add_css(drupal_get_path('module', 'dieta_recipe') . '/dieta_recipe.css');
+
+  $parsed_dieta_recipe_object = dieta_recipe_import_parse($form, $form_state);
+  if ($parsed_dieta_recipe_object != FALSE) {
+    //$node = node_form_submit_build_node($form, $form_state);
+    $node = dieta_recipe_import_get_node($parsed_dieta_recipe_object);
+    $cloned_node = clone($node);
+    $cloned_node->in_preview = 1;
+    $form_state['node_preview'] = theme('node_preview', array('node' => $cloned_node));
+    $form_state['rebuild'] = TRUE;
+    drupal_set_title(t('Preview'));
+  }
+}
+
+
+/**
+ * Validate handler for the single recipe import form.
+ */
+function dieta_recipe_import_form_validate($form, &$form_state) {
+  // Make sure that they choose an import format.
+  // Otherwise the text entry is lost and the import fails with an error.
+  if (empty($form_state['values']['dieta_recipe_format'])) {
+    form_set_error('dieta_recipe_format', t('You must choose a recipe import format.'));
+  }
+}
+
+
+/**
+ * Submit handler for the single recipe import form.
+ */
+function dieta_recipe_import_form_submit($form, &$form_state) {
+  global $user;
+  $parsed_dieta_recipe_object = dieta_recipe_import_parse($form, $form_state);
+  if ( ($node = dieta_recipe_import_get_node($parsed_dieta_recipe_object)) != FALSE ) {
+    node_save($node);
+    $form_state['redirect'] = 'node/' . $node->nid . '/edit';
+    drupal_set_message(t('Recipe Imported'));
+  }
+}
+
+
+/**
+ * Get a node-like stdClass object suitable for node_save and preview.
+ */
+function dieta_recipe_import_get_node($parsed_dieta_recipe_object = FALSE) {
+  global $user;
+  if ($parsed_dieta_recipe_object) {
+    //node stuff
+    $node = new stdClass();
+    $node->type = 'dieta_recipe';
+    $node->nid = NULL;
+    node_object_prepare($node);
+    $node->title = $parsed_dieta_recipe_object['title'];
+    $node->language = LANGUAGE_NONE;
+
+    //dieta_recipe stuff
+
+    //WYSIWYG fields need an array with a 'value' key.
+    $node->dieta_recipe_description = array('value' => $parsed_dieta_recipe_object['title'] . ' imported from Recipe Import');
+    $node->dieta_recipe_instructions = array('value' => $parsed_dieta_recipe_object['instructions']);
+    $node->dieta_recipe_notes = array('value' => isset($parsed_dieta_recipe_object['notes']) ? $parsed_recipe_object['notes'] : '');
+
+    $node->dieta_recipe_source = $parsed_dieta_recipe_object['source'] != '' ? $parsed_dieta_recipe_object['source'] : $user->name;
+    $node->dieta_recipe_yield = $parsed_dieta_recipe_object['yield'];
+    $node->dieta_recipe_yield_unit = $parsed_dieta_recipe_object['yield_unit'];
+    $node->dieta_recipe_preptime = $parsed_dieta_recipe_object['preptime'] != '' ? $parsed_dieta_recipe_object['preptime'] : 30;
+    $node->dieta_recipe_cooktime = $parsed_dieta_recipe_object['cooktime'] != '' ? $parsed_dieta_recipe_object['cooktime'] : 30;
+
+    //ingredients, have to change them into node->ingredients format
+    $ingredient_list = array();
+    $weight = 0;
+    foreach ($parsed_dieta_recipe_object['ingredients'] as $i) {
+      $ingredient = array();
+      $ingredient['quantity'] = $i['quantity'];
+      $ingredient['unit_key'] = $i['unit_key'];
+      $ingredient['name'] = isset($i['ingredient_name']) ? $i['ingredient_name'] : '';
+      $ingredient['note'] = isset($i['ingredient_note']) ? $i['ingredient_note'] : '';
+      $ingredient['weight'] = $weight++;
+      $ingredient_list[] = $ingredient;
+    }
+    $node->dieta_recipe_ingredients['ing'] = $ingredient_list;
+
+    return $node;
+  }
+  return FALSE;
+}
+
+
+/**
+ * Import parsing controller which loads the actual parsing instances based on recipe_format.
+ *
+ * All parser instances should return a $dieta_recipe object that looks like this:
+ *
+ * $dieta_recipe = array(
+ *   'title' => 'recipe title string',
+ *   'ingredients' => array of ingredients items(below);
+ *   'instructions' => 'string of instructions'
+ * );
+ *
+ * ingredients items = array(
+ *    'quantity' =>
+ *    'ingredient_name' =>
+ *    'unit_name' =>
+ *    'unit_key' => see recipe_unit_fuzzymatch().  ==FALSE if no-match
+ *    'ingre_obj' => comes from database lookup: see recipe_ingredient_match().  ==FALSE if no-match
+ * );
+ *
+ */
+function dieta_recipe_import_parse($form, &$form_state) {
+  $import_function = $form_state['values']['dieta_recipe_format'];
+  $text = $form_state['values']['dieta_recipe_import_text'];
+
+  $dieta_recipe = array();
+  if (function_exists($import_function)) {
+    $dieta_recipe = call_user_func($import_function, $text);
+    return $dieta_recipe;
+  }
+  else {
+    drupal_set_message(t('Recipe import function does not exist(%the_function)', array('%the_function' => $import_function)), 'error');
+    return FALSE;
+  }
+}
+
+
+/**
+ * Fetch a recipe unit.
+ * Used by the various import plugins.
+ *
+ * @param $dieta_recipe_name_or_abbrev
+ *   A string representing a unit of measure abbreviation or a unit name.
+ * @return
+ *   A recipe unit key as from recipe_get_units or FALSE if no match.
+ */
+function dieta_recipe_unit_fuzzymatch($unit_name_or_abbrev) {
+
+  $units = dieta_recipe_get_units();
+
+  // Empty strings should use the default non-printing 'unit'.
+  if (empty($unit_name_or_abbrev)) {
+    $unit_name_or_abbrev = 'unit';
+  }
+
+  // First pass unit case must match exactly( T=Tbsp, t=tsp ).
+  foreach ($units as $unit_key => $u) {
+    $pats = array();
+    // Add name pattern.
+    $pats[] = '^' . $u['name'] . 's{0,1}$';
+    // Add plural name pattern.
+    $pats[] = '^' . $u['plural'] . 's{0,1}$';
+    // Add abbreviation pattern.
+    $pats[] = '^' . $u['abbreviation'] . 's{0,1}\.{0,1}$';
+
+    foreach ($u['aliases'] as $alias) {
+      $pats[] = '^' . trim($alias) . 's{0,1}\.{0,1}$';
+    }
+    $search_pat = implode('|', $pats);
+    if (preg_match("/$search_pat/", $unit_name_or_abbrev)) {
+      return $unit_key;
+    }
+  }
+
+  // Second pass unit case doesn't matter.
+  foreach ($units as $unit_key => $u) {
+    $pats = array();
+    // Add name pattern.
+    $pats[] = '^' . $u['name'] . 's{0,1}$';
+    // Add plural name pattern.
+    $pats[] = '^' . $u['plural'] . 's{0,1}$';
+    // Add abbreviation pattern.
+    $pats[] = '^' . $u['abbreviation'] . 's{0,1}\.{0,1}$';
+
+    foreach ($u['aliases'] as $alias) {
+      $pats[] = '^' . trim($alias) . 's{0,1}\.{0,1}$';
+    }
+    $search_pat = implode('|', $pats);
+    if (preg_match("/$search_pat/i", $unit_name_or_abbrev)) {
+      return $unit_key;
+    }
+  }
+
+  return FALSE;
+}
+
+
+/**
+ * Fetch an ingredient.
+ *
+ * @param $dieta_recipe_ingredient_name
+ *   A string representing a recipe_ingredient_name.
+ * @return
+ *   A recipe_ingredient array upon successful load or FALSE
+ */
+function dieta_recipe_ingredient_match($dieta_recipe_ingredient_name) {
+  $terms = taxonomy_get_term_by_name($dieta_recipe_ingredient_name, DIETA_RECIPE_TAXONOMY_VOCABULARY);
+
+  foreach ($terms as $term) {
+    return array(
+      'id' => $term->tid,
+      'name' => $term->name
+    );
+  }
+  return FALSE;
+}
+
+
+/**
+ * Extend user_access to handle case where no import formats are available
+ */
+function dieta_recipe_import_myaccess($string, $account = NULL, $reset = FALSE) {
+
+  // short circuit if there are no parsers available.
+  $formats = module_invoke_all('dieta_recipeio', 'import_single');
+  if (count($formats) == 0) {
+    return FALSE;
+  }
+  // we have a format so continue to user_access
+  return user_access($string, $account, $reset);
+}
+
+
+/**
+ * Extend user_access to handle case where no export formats are available
+ */
+function dieta_recipe_export_multi_myaccess($string, $account = NULL, $reset = FALSE) {
+
+  // short circuit if there are no parsers available.
+  $formats = module_invoke_all('dieta_recipeio', 'export_multi');
+  if (count($formats) == 0) {
+    return FALSE;
+  }
+  // we have a format so continue to user_access
+  return user_access($string, $account, $reset);
+}
+
+
+/**
+ * Extend user_access to handle case where no import formats are available
+ */
+function dieta_recipe_import_multi_myaccess($string, $account = NULL, $reset = FALSE) {
+
+  // short circuit if there are no parsers available.
+  $formats = module_invoke_all('dieta_recipeio', 'import_multi');
+  if (count($formats) == 0) {
+    return FALSE;
+  }
+  // we have a format so continue to user_access
+  return user_access($string, $account, $reset);
+}
+
+
+/**
+ * Get the latest recipes by created date.
+ *
+ * @return
+ *   A database query result suitable for use the node_title_list.
+ */
+function dieta_recipe_get_latest($count = 5) {
+  $select = db_select('node', 'n');
+  $select->addField('n', 'nid');
+  $select->addField('n', 'title');
+  $select->addField('n', 'sticky');
+  $select->addField('n', 'created');
+  $select->condition('n.type', 'dieta_recipe');
+  $select->condition('n.status', 1);
+  $select->orderBy('n.sticky', 'DESC');
+  $select->orderBy('n.created', 'DESC');
+  $select->range(0, $count);
+  return $select->execute();
+}
+
+
+function strip_html_and_encode_entities($string) {
+  $string = filter_xss($string, array());
+  $string = str_replace("&deg;", "\xB0", $string);
+  return $string;
+}
+
+
+/**
+ * Implementation of hook_views_api for Views integration.
+ */
+function dieta_recipe_views_api() {
+ return array(
+   'api' => 2,
+   'path' => drupal_get_path('module', 'dieta_recipe') . '/includes',
+ );
+}
+
+
+/**
+ * Implementation of hook_field_extra_fields().
+ * This adds these fields to the manage fields UI for changing weights.
+ */
+function dieta_recipe_field_extra_fields() {
+
+  $extra = array();
+  $extra['node']['dieta_recipe'] = array(
+    'form' => array(
+      'dieta_recipe_description' => array(
+        'label' => t('Description'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -5,
+      ),
+      'dieta_recipe_yield' => array(
+        'label' => t('Yield'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -4,
+      ),
+      'dieta_recipe_yield_unit' => array(
+        'label' => t('Yield units'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -4,
+      ),
+      'dieta_recipe_ingredients' => array(
+        'label' => t('Ingredients'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -3,
+      ),
+      'dieta_recipe_instructions' => array(
+        'label' => t('Instructions'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -2,
+      ),
+      'dieta_recipe_notes' => array(
+        'label' => t('Additional notes'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -2,
+      ),
+      'dieta_recipe_source' => array(
+        'label' => t('Source'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -2,
+      ),
+      'dieta_recipe_preptime' => array(
+        'label' => t('Preparation time'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -1,
+      ),
+      'dieta_recipe_cooktime' => array(
+        'label' => t('Cooking time'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -1,
+      ),
+    ),
+    'display' => array(
+      'dieta_recipe_description' => array(
+        'label' => t('Description'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -5,
+      ),
+      'dieta_recipe_ingredients' => array(
+        'label' => t('Ingredients'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -3,
+      ),
+      'dieta_recipe_instructions' => array(
+        'label' => t('Instructions'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -2,
+      ),
+      'dieta_recipe_notes' => array(
+        'label' => t('Additional notes'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -2,
+      ),
+      'dieta_recipe_summary_box' => array(
+        'label' => t('dieta_recipe summary box'),
+        'description' => t('dieta_recipe module element'),
+        'weight' => -6,
+      ),
+    ),
+  );
+
+  return $extra;
+}
+
+
+/**
+ * Check a string for ISO-8859-1 chars and encode them to UTF-8.
+ *
+ * @param $in_str
+ *   A string with possible ISO-8859-1 chars.
+ * @return
+ *   A UTF8 string representation of $in_str.
+ */
+function fixEncoding($in_str) {
+  $cur_encoding = mb_detect_encoding($in_str) ;
+  if ($cur_encoding == "UTF-8" && mb_check_encoding($in_str, "UTF-8")) {
+    return $in_str;
+  }
+  else {
+    return utf8_encode($in_str);
+  }
+}
+
+
+/**
+ * Implements hook_rdf_namespaces().
+ */
+function dieta_recipe_rdf_namespaces() {
+  return array(
+    'schema' => 'http://schema.org/',
+  );
+}
+
+
+/**
+ * Implements hook_rdf_mapping().
+ */
+function dieta_recipe_rdf_mapping() {
+  return array(
+    array(
+      'type' => 'node',
+      'bundle' => 'dieta_recipe',
+      'mapping' => array(
+        'rdftype' => array('schema:DietaRecipe'),
+        'title' => array(
+          'predicates' => array('schema:name'),
+        ),
+        'dieta_recipe_instructions' => array(
+          'predicates' => array('schema:instructions'),
+        ),
+        'dieta_recipe_description' => array(
+          'predicates' => array('schema:summary'),
+        ),
+        'dieta_recipe_preptime' => array(
+          'predicates' => array('schema:prepTime'),
+        ),
+        'dieta_recipe_cooktime' => array(
+          'predicates' => array('schema:cookTime'),
+        ),
+        'dieta_recipe_totaltime' => array(
+          'predicates' => array('schema:totalTime'),
+        ),
+        'dieta_recipe_yield' => array(
+          'predicates' => array('schema:yield'),
+        ),
+      ),
+    ),
+  );
+}
+
+
+/*
+ * Wrap a duration string in iso8601 format.
+ * Used for RDFa duration elements.
+ */
+function dieta_recipe_duration_iso8601($data = '') {
+  return 'PT' . $data . 'M';
+}
+
+
+/**
+ * WARNING:  Do not change keys once they are released without a migration path.
+ *
+ * Get an array of units.
+ *
+ * This allows for unit string translations and the possibility of
+ *   allowing for unit level integration with other modules.
+ * For new units, use the same unit keys as the unitsapi module keys
+ *   found in units.xml.  NOTE:  This is not possible for all units.
+ * @return
+ *   An array of units.  $units = array('unit key'=> array(name=>, plural=>, abbreviation=>))
+ */
+function dieta_recipe_get_units() {
+  $units = &drupal_static(__FUNCTION__);
+
+  if (!isset($names)) {
+    $units = db_query('SELECT * FROM {dieta_recipe_unit} ORDER BY name ASC')->fetchAllAssoc('unit_key');
+  }
+
+  return $units;
+}
+
+function dieta_recipe_ingredient_vocabulary($object = FALSE) {
+  $vocabularies = taxonomy_vocabulary_get_names();
+
+  if (!isset($vocabularies[DIETA_RECIPE_TAXONOMY_VOCABULARY])) {
+    return FALSE;
+  }
+
+  $vocabulary = $vocabularies[DIETA_RECIPE_TAXONOMY_VOCABULARY];
+
+  return !$object
+    ? $vocabulary->vid
+    : $vocabulary;
+}
+
+/**
+ * Saves the relation between taxonomy term and the node.
+ *
+ * @param $dieta_recipe
+ *   A node containing recipe data.
+ * @param $ingridients
+ *   An array containing list of ingredients.
+ */
+function dieta_recipe_ingredient_synchronize_fields(&$dieta_recipe, &$ingredients) {
+  // @todo review quickfix for better solution
+  // Manually set language for products
+  $language = 'und';
+
+
+  // Get units
+  $unit_list = dieta_recipe_get_units();
+
+  // ADD FIELD NAME TO THIS ARRAY
+  $fields = array(
+    'field_ca',
+    'field_carbohydrates',
+    'field_fats',
+    'field_k',
+    'field_na',
+    'field_product_price',
+    'field_proteins',
+    'field_caloric_effect',
+    'field_glycemic_index',
+  );
+  // Prepare array and create sugar
+  foreach ($fields as $field_name) {
+    // Reset current value of field in recipe
+    $dieta_recipe->{$field_name} = array($language => array(array('value' => 0)));
+
+    // Set ingridient value for this field to zero if not exists
+    foreach ($ingredients as $id => &$ingredient) {
+      if (!isset($ingredient['term']->{$field_name}[$language][0]['value'])) {
+        $ingredient['term']->{$field_name}[$language][0]['value'] = 0;
+      }
+    }
+  }
+
+  unset($ingredient);
+  
+  // Sync field values between ingredient and recipe
+  foreach ($ingredients as $id => $ingredient) {
+    $unit_weight = isset($unit_list[$ingredient['unit_key']])
+      ? (int) $unit_list[$ingredient['unit_key']]->weight
+      : 0;
+
+    // GENERAL FORMULA:
+    // Ca[recipe] += Ca[N]*q[N]*k[N]/100
+
+    // Multiply ingredient field value by ingredient quantity and add to recipe field value
+    $dieta_recipe->field_ca[$language][0]['value']             += $ingredient['term']->field_ca[$language][0]['value']             * $ingredient['quantity'] * $unit_weight / 100;
+    $dieta_recipe->field_carbohydrates[$language][0]['value']  += $ingredient['term']->field_carbohydrates[$language][0]['value']  * $ingredient['quantity'] * $unit_weight / 100;
+    $dieta_recipe->field_fats[$language][0]['value']           += $ingredient['term']->field_fats[$language][0]['value']           * $ingredient['quantity'] * $unit_weight / 100;
+    $dieta_recipe->field_k[$language][0]['value']              += $ingredient['term']->field_k[$language][0]['value']              * $ingredient['quantity'] * $unit_weight / 100;
+    $dieta_recipe->field_na[$language][0]['value']             += $ingredient['term']->field_na[$language][0]['value']             * $ingredient['quantity'] * $unit_weight / 100;
+    $dieta_recipe->field_proteins[$language][0]['value']       += $ingredient['term']->field_proteins[$language][0]['value']       * $ingredient['quantity'] * $unit_weight / 100;
+    $dieta_recipe->field_caloric_effect[$language][0]['value'] += $ingredient['term']->field_caloric_effect[$language][0]['value'] * $ingredient['quantity'] * $unit_weight / 100;
+    $dieta_recipe->field_glycemic_index[$language][0]['value'] += $ingredient['term']->field_glycemic_index[$language][0]['value'] * $ingredient['quantity'] * $unit_weight / 100;
+    $dieta_recipe->field_product_price[$language][0]['value']  += $ingredient['term']->field_product_price[$language][0]['value']  * $ingredient['quantity'] * $unit_weight * $dieta_recipe->dieta_recipe_yield / 100;
+  
+    //$log .= $ingredient['name'].' tid_'.$ingredient['term']->tid.' quantity='.$ingredient['quantity'].' field_caloric_effect='.$ingredient['term']->field_caloric_effect['und'][0]['value'].' w='.$unit_weight. ' new_value=' . $dieta_recipe->field_caloric_effect[$language][0]['value'] .'; ';      
+  }
+  //watchdog('dieta_recipe_ingredient_synchronize_fields', $log);
+}
+
+
+function dieta_recipe_unit_delete($key) {
+  db_delete('dieta_recipe_unit')
+    ->condition('unit_key', $key)
+    ->execute();
+
+  drupal_set_message(t('Unit %unit successfully deleted.', array('%unit' => $key)));
+  drupal_goto();
+
+  return TRUE;
+}
+
+function dieta_recipe_count_recipes($tid) {
+  $select = db_select('dieta_recipe_node_ingredient', 'ri');
+  $select->condition('ri.ingredient_id', $tid);
+  $recipes = $select->countQuery()->execute()->fetchField();
+
+  return format_plural($recipes, '1 recipe', '@count recipes');
+}
+
+function dieta_recipe_form_alter(&$form, &$form_state, $form_id) {
+  $module_path = drupal_get_path('module', 'dieta_recipe');
+  if ($form['#form_id'] == 'dieta_recipe_node_form') {
+    // скрываем вычисляемые поля
+    $form['field_proteins']['#access'] = FALSE;
+    $form['field_fats']['#access'] = FALSE;
+    $form['field_carbohydrates']['#access'] = FALSE;
+    $form['field_caloric_effect']['#access'] = FALSE;
+    $form['field_ca']['#access'] = FALSE;
+    $form['field_k']['#access'] = FALSE;
+    $form['field_na']['#access'] = FALSE;  
+    $form['dieta_recipe_cooktime']['#access'] = FALSE;  
+//    $form['dieta_recipe_preptime']['#access'] = FALSE;   
+    
+    // скрываем поле "инструкции", которое не нужно, но я не стал его удалять, так как оно встроено в модуле (Колдунов)
+    $form['dieta_recipe_instructions']['#access'] = FALSE;  
+    
+	// для ингредиентов и шагов по-умолчанию по три пустых значения делаются в других функциях.
+    
+    // добавляем подсказки внутри полей
+    dieta_recipe_form_add_placeholders($form);    
+    
+    $form['#attached']['css'][] = $module_path . '/css/dieta_recipe_form_node.css';
+    
+		// добавляем цифры для шагов
+		dieta_recipe_add_numbers_for_steps($form);
+
+    /*
+     * Добавляем обертку для полей времени шага,
+     * чтобы был одно поле для ввода числа минут 
+     * и радиобаттоны выбора типа времени ("активное" / "общее")
+     */
+    /*
+    foreach ($form['field_recipe_steps']['und'] as $key => $value) {
+      if (is_numeric($key)) {
+        //$time_block = theme('dieta_recipe_steps_time', array('key' => $key));
+        //$form['field_recipe_steps']['und'][$key]['field_recipe_step_time2']['#suffix'] = $time_block;
+        if (!isset($form['field_recipe_steps']['und'][$key]['field_recipe_step_time']['und'][0]['value']['#default_value'])) {
+          $form['field_recipe_steps']['und'][$key]['field_recipe_step_time2']['und'][0]['value']['#default_value'] = '';
+        }
+        if (!isset($form['field_recipe_steps']['und'][$key]['field_recipe_step_time2']['und'][0]['value']['#default_value'])) {
+          $form['field_recipe_steps']['und'][$key]['field_recipe_step_time2']['und'][0]['value']['#default_value'] = '';
+        }
+        $default_time      = $form['field_recipe_steps']['und'][$key]['field_recipe_step_time2']['und'][0]['value']['#default_value'];
+        $default_time_type = 'common';
+        if (empty($default_time)) {
+          $default_time      = $form['field_recipe_steps']['und'][$key]['field_recipe_step_time']['und'][0]['value']['#default_value'];
+          $default_time_type = 'active';
+        }
+        $active_type_label = '<img src="/'.$module_path.'/images/step_type_time_active.png" title="Активное время приготовления. То есть время, в которое совершаются действия над блюдом."/>';
+        $common_type_label = '<img src="/'.$module_path.'/images/step_type_time_common.png" title="Общее время приготовления. То есть все время, которое потребовалось на данный шаг."/>';
+        $form['field_recipe_steps']['und'][$key]['field_recipe_step_falsh_time_type'] = array(
+            '#type' => 'radios',
+            '#title' => '',
+            '#options' => array('active' => $active_type_label, 'common' => $common_type_label),
+            '#default_value' => $default_time_type,
+            '#attributes' => array('class' => array('field-recipe-step-falsh-time-type')),
+        );
+        $form['field_recipe_steps']['und'][$key]['field_recipe_step_falsh_time'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Время, мин.'),
+//            '#suffix' => '<span class="field-suffix"> мин.</span>',
+            '#default_value' => $default_time,
+            '#attributes' => array('class' => array('field-recipe-step-falsh-time')),
+        );
+      }
+    }
+    */
+    
+//    $form['#validate'][] = 'dieta_recipe_form_validate_time_fields';
+//    $form['#submit'][] = 'dieta_recipe_form_submit_set_time_fields';
+    
+    $form['#attached']['css'][] = $module_path . '/css/dieta_recipe_step_time.css';
+  }
+}
+
+/**
+ * Устанавливает подсказки внутри полей
+ * @param array $form - массив формы в формате form api
+ */
+function dieta_recipe_form_add_placeholders(&$form) {
+  $form['title']['#attributes']['placeholder'] = 'Например: Карпачо из лосося';
+  $form['dieta_recipe_description']['#attributes']['placeholder'] = 'Расскажите о вашем рецепте';
+  foreach ($form['dieta_recipe_ingredients']['ing'] as $i => $ing) {
+    if (is_numeric($i)) {
+      $form['dieta_recipe_ingredients']['ing'][$i]['quantity']['#attributes']['placeholder'] = 'Количество';
+      $form['dieta_recipe_ingredients']['ing'][$i]['unit_key']['#options']['']          = 'Вес';
+      $form['dieta_recipe_ingredients']['ing'][$i]['name']['#attributes']['placeholder']     = 'Выберите продукт';
+      $form['dieta_recipe_ingredients']['ing'][$i]['note']['#attributes']['placeholder']     = 'Можно использовать лайм вместо лимона';
+    }
+  }
+  foreach ($form['field_recipe_steps']['und'] as $j => $step) {
+    if (is_numeric($j)) {
+      $form['field_recipe_steps']['und'][$j]['field_recipe_step_desc']['und'][0]['value']['#attributes']['placeholder'] = 'Описание шага приготовления блюда. Например, мелко нарезать лук и обжарить его до золотистой корочки.';
+    }
+  }
+  
+  $form['dieta_recipe_source']['#attributes']['placeholder'] = 'Укажите автора рецепта или ссылку на источник';
+}
+
+//Строим форму вывода рецепта с последующим ребилдом формы для вывода 3 пунктов филд коллекшн
+// для ингредиентов и шагов делаем по-умолчанию по три пустых значения
+function dieta_recipe_build_form($type) {
+  // get the standard node form;
+  // we cannot get it from drupal_get_form() because we need the form_state reference,
+  // so we copy a bit of code from node_add() and drupal_get_form()
+  global $user;
+  $form_id = 'dieta_recipe_node_form';
+  $form_state = array();
+  $form_state['build_info']['args'][] = (object) array(
+    'uid' => $user->uid,
+    'name' => (isset($user->name) ? $user->name : ''),
+    'type' => $type,
+    'language' => LANGUAGE_NONE
+  );
+  $form = drupal_build_form($form_id, $form_state);
+
+  // we now have exactly the form which node_add() is returning BUT
+  // we also have a reference of the form state array ready to alter;
+
+  // how many items do we want?
+  $num_items = 3;
+  // this is exactly what the ajax request for the add more button does
+  $form_state['field']['field_recipe_steps'][LANGUAGE_NONE]['items_count'] = $num_items;
+
+  // now this is important!! set a flag inside the form state so that the hook_form_alter() function
+  // is able to know when it should pre-populate (remember: hook_form_alter() will be called twice
+  // during this process)
+  $form_state['my_module_prepopulate'] = TRUE;
+
+  // reset the html ids so that our new rebuilted form will get nice ids and not form_id--2
+  drupal_static_reset('drupal_html_id');
+
+  // rebuild the form and return it;
+  // through drupal_rebuild_form() hook_form_alter() will be called again - this time with our
+  // prepopulate flag and 5 empty form elements ready to prefill
+  return drupal_rebuild_form($form_state['build_info']['form_id'], $form_state, $form);
+}
+
+
+/**
+ * Добавляет номера для шагов в форме рецепта
+ * @param array $form - массив формы в формате form api
+ */
+function dieta_recipe_add_numbers_for_steps(&$form) {
+	$n = 1;
+	foreach ($form['field_recipe_steps']['und'] as $key => $value) {
+		if (is_numeric($key)) {
+			$form['field_recipe_steps']['und'][$key]['step_number'] = array(
+				'#type' => 'markup',
+				'#markup' => '<div class="step-number">' . $n++ . '</div>',
+				'#weight' => -100,
+			);
+		}
+	}
+}
+
+/*
+ * Validate-функция, которая проверяет добавленное в form_alter фальш поле для ввода времени шага
+ */
+//function dieta_recipe_form_validate_time_fields($form, &$form_state) {    
+//  foreach ($form_state['values']['field_recipe_steps']['und'] as $key => $value) {
+//    if (is_numeric($key)) {
+//      $time = $form_state['values']['field_recipe_steps']['und'][$key]['field_recipe_step_falsh_time'];
+//      if ( !is_numeric($time) && !empty($time)) {
+//        form_set_error("field_recipe_steps][und][$key][field_recipe_step_falsh_time", t('Поле времени должно быть числовым'));
+//      }
+//    }
+//  }
+//}
+
+
+/*
+ * Submit-функция для формы рецепта.
+ * Устанавливает значения времени шагов исходя из фальш переключателя типа времени
+ */
+//function dieta_recipe_form_submit_set_time_fields($form, &$form_state) {
+////  dsm($form_state['values']);
+//  // суммарное активное время
+//  $summa_step_time = 0;
+//  // суммарное общее время
+//  $summa_step_time2 = 0;
+//  $summa_cooktime = 0; // суммарное активное время
+//  $summa_preptime = 0; // суммарное общее время
+//  foreach ($form_state['values']['field_recipe_steps']['und'] as $key => $value) {
+//    if (is_numeric($key)) {
+//      /*
+//      $time = $form_state['values']['field_recipe_steps']['und'][$key]['field_recipe_step_falsh_time'];
+//      $type = $form_state['values']['field_recipe_steps']['und'][$key]['field_recipe_step_falsh_time_type'];
+//      switch ($type) {
+//        case 'active':          
+//          $form_state['values']['field_recipe_steps']['und'][$key]['entity']->field_recipe_step_time['und'][0]['value']  = $time;
+//          $form_state['values']['field_recipe_steps']['und'][$key]['entity']->field_recipe_step_time2['und'][0]['value'] = NULL;   
+//          $summa_cooktime += (int)$time;
+//          break;
+//        case 'common':  */         
+//          $form_state['values']['field_recipe_steps']['und'][$key]['entity']->field_recipe_step_time['und'][0]['value']  = NULL;
+//          $form_state['values']['field_recipe_steps']['und'][$key]['entity']->field_recipe_step_time2['und'][0]['value'] = $time;    
+//          $summa_preptime += (int)$time;             
+//          /*
+//          break;
+//      } */
+//    }
+//  }
+//  
+//  // устанавливаем суммарное время в вычисляемые поля
+//  $form_state['values']['dieta_recipe_cooktime'] = $summa_cooktime; // суммарное активное время
+//  $form_state['values']['dieta_recipe_preptime'] = $summa_preptime; // суммарное общее время
+//}
+
+/*
+ * Implements Hook_preprocess_hook().
+ */
+function dieta_recipe_preprocess_dieta_recipe_ingredients_block_names(&$vars) {
+  $module_path = drupal_get_path('module', 'dieta_recipe');
+  
+  // получаем термины категорий продуктов
+  $voc = taxonomy_vocabulary_machine_name_load('products');
+  $categories = taxonomy_get_tree($voc->vid, 1, 1);
+  
+  // получаем термины самих продуктов всех категорий
+  $products = array();
+  foreach ($categories as $i => $cat) {
+    $products_of_category = taxonomy_get_tree($voc->vid, $cat->tid, 1);
+    $products = array_merge($products, $products_of_category);
+    // получаем количество продуктов в каждой категории
+    $categories[$i]->count_products = count($products_of_category);
+  }  
+  
+  $category_all                 = new stdClass();
+  $category_all->tid            = 0;
+  $category_all->name           = 'Все';
+  $category_all->count_products = count($products);
+  array_unshift($categories, $category_all);
+  
+  $vars['categories'] = $categories;
+  $vars['products']   = $products;
+}
+
+function dieta_recipe_get_products_block_ajax_callback($category, $product_name, $mode = 'AJAX') {   
+  $category = $_POST['category'];
+  $product_name = $_POST['product_name'];
+  if (!empty($product_name) && !empty($category)) {
+    $voc = taxonomy_vocabulary_machine_name_load('products');
+
+    $term = new stdClass();
+    $term->vid  = $voc->vid;
+    $term->name = $product_name;
+    $term->parent = array($category);
+    taxonomy_term_save($term);
+  }
+//  watchdog('dieta_recipe', "category=$category; product_name=$product_name");
+//  watchdog('dieta_recipe', 'POST: category='.$_POST['category'].'; product_name='.$_POST['product_name']);
+  $li = '';
+  if (!empty($term->tid)) {
+    $li = '<li class="product category-'.$category.' tid-'.$term->tid.'">'.$product_name.'</li>';
+    dieta_recipe_send_mail_about_new_product($term);
+  }
+//  $commands[] = ajax_command_before('.dieta-recipe-ingredients-block-names .form-add-product', $li);
+// 
+//  return array('#type' => 'ajax', '#commands' => $commands);
+  drupal_json_output($li);
+}
+
+/*
+ * Отправка письма группе администраторов о том, 
+ * что пользователи добавили продукт в словарь
+ */
+function dieta_recipe_send_mail_about_new_product($term) {
+  GLOBAL $language;
+  $receiving_group_role_names = array('administrator'); 
+  $message_text = '<p>На сайт добавлен продукт: <a href="http://dieta-abc.ru/taxonomy/term/'.$term->tid.'">'.$term->name.'</a></p>
+<p>Вам обязательно нужно проверить корректно ли он описан и, при необходимости внести изменения. Для этого перейдите по ссылке: <a href="http://dieta-abc.ru/taxonomy/term/'.$term->tid.'/edit">Редактировать '.$term->name.'</a></p>';
+  
+  $roles = user_roles();
+  $receiving_group_role_rids = array();
+  for ($i = 0; $i < count($receiving_group_role_names); $i++) {
+    $name = $receiving_group_role_names[$i];
+    $rid = array_search($name, $roles);
+    if (!empty($rid)) {
+      $receiving_group_role_rids[] = $rid;
+    }
+  }
+  
+  //получаем uid пользователей ролей получателей
+  $uids = dieta_recipe_get_users_by_rids($receiving_group_role_rids);
+  for ($i = 0; $i < count($uids); $i++) {
+    $user = user_load($uids[$i]);
+    
+    $params = array(
+        'message' => $message_text,
+    );
+    $from = variable_get('site_mail', 'info@dieta-abc.ru');
+    drupal_mail('dieta_recipe', 'message_about_new_product', $user->mail, $language, $params, $from, TRUE);
+    watchdog('dieta_recipe', "Письмо о добавлении термина отправлено для пользователя $user->name ($user->uid) по адресу $user->mail.");
+  }
+}
+
+function dieta_recipe_get_users_by_rids($rids) {
+  $result = db_select('users_roles', 'ur')
+            ->fields('ur', array('uid'))
+            ->condition('rid', $rids, 'IN')
+            ->execute();
+  return $result->fetchCol();
+}
+
+function dieta_recipe_mail($key, &$message, $params) {
+  $options = array(
+    'langcode' => $message['language']->language,
+  );
+  switch ($key) {
+    case 'message_about_new_product':
+      $headers = array(
+        'MIME-Version' => '1.0',
+        'Content-Type' => 'text/html; charset=UTF-8; format=flowed',
+        'Content-Transfer-Encoding' => '8Bit',
+        'X-Mailer' => 'Drupal'
+      );
+      foreach($headers as $key => $value) {
+          $message['headers'][$key] = $value;
+      };
+      $message['subject'] = 'dieta-abc.ru: Пользователь добавил новый продукт.';
+      $message['body'][] = $params['message'];
+      $message['body'][] = '</body>' . "\n" . '</html>' . "\n";
+      break;
+  }    
+}

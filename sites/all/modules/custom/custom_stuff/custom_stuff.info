@@ -1,0 +1,5 @@
+name = custom stuff
+description = Собрание различных функции по кастомизации проекта dieta-abc.ru.
+package = Custom
+core = 7.x
+version = 7.x-1.x

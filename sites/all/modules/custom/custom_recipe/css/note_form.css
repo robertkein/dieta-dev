@@ -1,0 +1,23 @@
+form#custom-recipe-note-form.only-text > div > * {
+  display: none;
+}
+
+form#custom-recipe-note-form.only-text #note-text-wrapper {
+  display: block;
+}
+
+form#custom-recipe-note-form.only-form > div > * {
+  display: block;
+}
+
+form#custom-recipe-note-form.only-form #note-text-wrapper {
+  display: none;
+}
+form#custom-recipe-note-form textarea {
+  border: 1px solid #ccc;
+}
+
+form#custom-recipe-note-form .form-submit {
+  text-align: center;
+  width: 80px;
+}

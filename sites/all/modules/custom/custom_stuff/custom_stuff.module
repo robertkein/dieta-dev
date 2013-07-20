@@ -1,0 +1,108 @@
+<?php
+
+function custom_stuff_menu_local_tasks_alter(&$data, $router_item, $root_path){ 
+  GLOBAL $user;
+   if(arg(1)!=null && is_numeric(arg(1))){
+     $nid = arg(1);
+     if ($node = node_load($nid)) {
+        foreach ($data['tabs']['0']['output'] as $key => &$tab){
+          if ($tab['#link']['path'] == "node/%/comments"){
+            $count_comments = $node->comment_count;
+            $tab['#link']['title'] = "Комментарии ($count_comments)";
+          }	
+          if ($tab['#link']['path'] == "node/%/notes"){
+            $tab['#link']['title'] = "Мои заметки";
+          }	
+        }
+     }
+   }
+}
+
+
+function custom_stuff_menu() {
+    $items['delete_aliases_terms'] = array(
+        'page callback' => 'custom_stuff_delete_aliases',
+        'access arguments' => array('access content'),
+    );
+    $items['create_aliases_for_views'] = array(
+        'page callback' => 'custom_stuff_create_aliases',
+        'access arguments' => array('access content'),
+    );
+
+    return $items;
+}
+
+function custom_stuff_delete_aliases() {
+    return "отключено на всякий пожарный";
+
+    $vocabulary = taxonomy_vocabulary_machine_name_load('products');
+    $terms = taxonomy_term_load_multiple(array(), array('vid' => $vocabulary->vid));
+    //dpm($terms);
+    foreach ($terms as $key => $term) {
+        //используем функцию из модуля алиасов, для простоты.
+        $term_depth = custom_aliases_get_term_depth($term->tid);
+        if ($term_depth == 3) {
+            pathauto_entity_path_delete_all('taxonomy_term', $term, "taxonomy/term/{$term->tid}");
+        }
+    }
+    //$vocabulary = taxonomy_vocabulary_load($vid);
+    return "working";
+}
+
+function custom_stuff_create_aliases() {
+    $vocabulary = taxonomy_vocabulary_machine_name_load('products');
+    $terms = taxonomy_term_load_multiple(array(), array('vid' => $vocabulary->vid));
+	
+    foreach ($terms as $key => $term) {
+        //используем функцию из модуля алиасов, для простоты.
+        $term_depth = custom_aliases_get_term_depth($term->tid);
+        $path = drupal_get_path('module', 'pathauto');
+        include_once $path . '/pathauto.inc';
+        if ($term_depth == 3) {
+            $parent_term = array_shift(taxonomy_get_parents($term->tid));
+            $path = "wiki/" . $parent_term->tid . "/" . $term->tid;            
+            $transliteration_term = pathauto_cleanstring($term->name);
+            $transliteration_parent_term = pathauto_cleanstring($parent_term->name);
+            $new_alias = "wiki/" . $transliteration_parent_term . "/" . $transliteration_term;
+            _pathauto_set_alias(array("alias" => $new_alias, "source" => $path));
+        }
+    }
+    return "";
+}
+
+function custom_stuff_transliteration_name_term($name) {
+    $transliterated_text = transliteration_get($name);
+    $new_name = str_replace(' ', '-', $transliterated_text);
+    return $new_name;
+}
+
+/**
+ * Implements hook_form_alter
+ */
+function custom_stuff_form_COMMENT_FORM_alter(&$form, &$form_state) {
+  $form['actions']['preview']['#access'] = FALSE;
+  $form['comment_body']['und']['#title'] = 'Комментарий';
+  $form['comment_body']['und'][0]['#title'] = 'Комментарий';
+  $form['comment_body']['und'][0]['#rows'] = '2';
+
+  $form['comment_body']['und'][0]['#format'] = 'plain_text';
+
+  unset($form['author']['_author']);
+}
+
+/*
+ * Implements hook_menu_alter().
+ */
+function custom_stuff_menu_alter(&$items) {
+  // для страниц создания и редактирования материалов устанавливаем НЕадмин тему
+  $items['node/add/dieta-recipe']['theme callback'] = 'custom_stuff_get_current_theme';  
+  $items['node/%node/edit']['theme callback'] = 'custom_stuff_get_current_theme';
+}
+
+/*
+ * Callback функция для пунктов меню. 
+ * Возвращает имя дефолтной темы.
+ */
+function custom_stuff_get_current_theme() {
+  return variable_get('theme_default', 'bartik');
+}

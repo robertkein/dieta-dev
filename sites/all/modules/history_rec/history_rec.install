@@ -1,0 +1,172 @@
+<?php
+
+/**
+ * @file Install file for history_rec module
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function history_rec_schema() {
+  $schema = array(
+    'history_rec_user_map' => array(
+      'description' => 'This table stores anonymous user to euid mapping',
+      'fields' => array(
+        'euid' => array(
+          'description' => 'The extended user_id, with negative id assigned to different anonymous users based on ip address.',
+          'type' => 'int',
+          'size' => 'normal',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ),
+        'uid' => array(
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "User's {users}.uid.",
+        ),
+        'hostname' => array(
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => FALSE,
+          'description' => 'Hostname of user that visited the page.',
+        ),
+        'created' => array(
+          'description' => 'The Unix timestamp this record is created.',
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+      ),
+      'primary key' => array('euid'),
+      'indexes' => array(
+        'hostname' => array('hostname'),
+        'created' => array('created'),
+      ),
+    ),
+  );
+  return $schema;
+}
+
+
+/**
+ * Implements hook_install().
+ */
+function history_rec_install() {
+
+  variable_set('history_rec_uid_watermark', 2 * HISTORY_REC_UID_WATERMARK_INCREMENT);
+  variable_set('history_rec_last_aid', 0);
+
+  db_query("INSERT INTO {history_rec_user_map} VALUE (:euid, 0, '127.0.0.1', :time)",
+    array(':euid' => variable_get('history_rec_uid_watermark'), ':time' => time()));
+
+  $apps['history_rec'] = array(
+    'title' => st('Browsing History Recommender'),
+    'params' => array(
+      'algorithm' => 'item2item',
+      'table' => '{history}',
+      'fields' => array('uid', 'nid', NULL, 'timestamp'),
+      'entity_type' => array(
+          'similarity' => array('node', 'node'),
+          'prediction' => array('users', 'node'),
+      ),
+      'performance' => 'auto',
+      'preference' => 'boolean',
+      'similarity_score_filter' => '>0.05',
+      'prediction_score_filter' => '>0.05',
+      'prediction_source_filter' => '<'. variable_get('history_rec_uid_watermark'),
+    ),
+  );
+  recommender_app_register($apps);
+
+  // [#1217552]
+
+  /*$boost_comments = variable_get('history_rec_boost_comments', 1);
+  $boost_recency = variable_get('history_rec_boost_recency', 1);
+
+  // we use a timestamp in order to make sure the content of the table doesn't change in the calculation
+  $now = time();
+  $days60 = 60*24*60*60;  // seconds in 60 days
+
+  // prepare the users-nodes relationship.
+
+  $weight = $boost_recency ? "POW(2, -($now-h.timestamp)/$days60)" : 1;
+  $history_sql = "SELECT h.uid, h.nid, $weight weight FROM {history} h
+      INNER JOIN {node} n ON h.nid=n.nid
+      WHERE n.type IN $enabled_types AND n.changed<$now AND h.uid<>0";
+
+  if ($boost_comments) {
+    $weight = $boost_recency ? "POW(2, -($now-MAX(c.timestamp))/$days60)" : 1;
+    $comments_sql = "SELECT c.uid, c.nid, $weight weight FROM {comments} c
+        INNER JOIN {node} n ON c.nid=n.nid
+        WHERE n.type IN $enabled_types AND c.timestamp<$now AND c.uid<>0
+        GROUP BY c.uid, c.nid";
+    $sql = "SELECT uid, nid, SUM(weight) weight FROM ($history_sql UNION ALL $comments_sql) a GROUP BY uid, nid";
+  }
+  else {
+    $sql = $history_sql;
+  }*/
+}
+
+
+/**
+ * Implements hook_disable().
+ */
+function history_rec_disable() {
+  recommender_app_remove('history_rec');
+}
+
+function history_rec_uninstall() {
+  variable_del('history_rec_uid_watermark');
+  variable_del('history_rec_last_aid');
+  variable_del('history_rec_source');
+  recommender_app_remove('history_rec');
+}
+
+
+/**
+ * Implements hook_update_N().
+ * delete old history_rec recommender app.
+ */
+function history_rec_update_7001() {
+  recommender_app_unregister('history_rec_i2i');
+}
+
+/**
+ * update table.
+ */
+function history_rec_update_7002() {
+  db_drop_table('history_rec_browsing');
+  db_drop_table('history_rec_user_mapping');
+  $schema = history_rec_schema();
+  db_create_table('history_rec_user_map', $schema['history_rec_user_map']);
+
+  variable_set('history_rec_uid_watermark', 2 * HISTORY_REC_UID_WATERMARK_INCREMENT);
+  variable_set('history_rec_last_updated', 0);
+  db_query("INSERT INTO {history_rec_user_map} VALUE (:euid, 0, '127.0.0.1', :time)",
+      array(':euid' => variable_get('history_rec_uid_watermark'), ':time' => time()));
+
+  recommender_app_update('history_rec', array(
+    'prediction_score_filter' => '>0.05',
+    'prediction_source_filter' => '<'. variable_get('history_rec_uid_watermark'),
+  ));
+}
+
+/**
+ * Update recommender settings.
+ */
+function history_rec_update_7003() {
+  recommender_app_update('history_rec', array(
+    'similarity_score_filter' => '>0.05',
+  ));
+}
+
+/**
+ * Update index.
+ */
+function history_rec_update_7004() {
+  db_drop_index('history_rec_user_map', 'uid_hostname');
+  db_add_index('history_rec_user_map', 'hostname', array('hostname'));
+  variable_del('history_rec_last_updated');
+  variable_set('history_rec_last_aid', 0);
+}

@@ -1,0 +1,68 @@
+<?php
+
+/**
+ * Installation file for fivestar_rec.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function fivestar_rec_install() {
+  $sql = "SELECT uid, entity_id, AVG(value) AS value, MAX(timestamp) AS timestamp FROM {votingapi_vote} WHERE entity_type='node' AND value_type='percent' AND tag='vote' AND uid>0 GROUP BY uid, entity_id";
+
+  $apps = array(
+    'fivestar_rec_i2i' => array(
+      'title' => st('Fivestar Recommender (item2item)'),
+      'params' => array(
+        'algorithm' => 'item2item',
+        'sql' => $sql,
+        'fields' => array('uid', 'entity_id', 'value', 'timestamp'),
+        'entity_type' => array(
+          'similarity' => array('node', 'node'),
+          'prediction' => array('users', 'node')
+        ),
+        'performance' => 'auto',
+        'preference' => 'score',
+      ),
+    ),
+
+    'fivestar_rec_i2i_increment' => array(
+      'title' => st('Fivestar Recommender (item2item increment)'),
+      'params' => array(
+        'algorithm' => 'item2item_increment',
+        'sql' => $sql,
+        'fields' => array('uid', 'entity_id', 'value', 'timestamp'),
+        'entity_type' => array(
+          'similarity' => array('node', 'node'),
+          'prediction' => array('users', 'node')
+        ),
+        'performance' => 'memory',
+        'preference' => 'score',
+      ),
+    ),
+
+    'fivestar_rec_u2u' => array(
+      'title' => st('Fivestar Recommender (user2user)'),
+      'params' => array(
+        'algorithm' => 'user2user',
+        'sql' => $sql,
+        'fields' => array('uid', 'entity_id', 'value', 'timestamp'),
+        'entity_type' => array(
+          'similarity' => array('users', 'users'),
+          'prediction' => array('users', 'node')
+        ),
+        'performance' => 'auto',
+        'preference' => 'score',
+      ),
+    ),
+  );
+
+  recommender_app_register($apps);
+}
+
+/**
+ * Implements hook_disable().
+ */
+function fivestar_rec_disable() {
+  recommender_app_unregister('fivestar_rec_i2i', 'fivestar_rec_i2i_increment', 'fivestar_rec_u2u');
+}

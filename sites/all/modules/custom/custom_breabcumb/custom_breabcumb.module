@@ -1,0 +1,32 @@
+<?php
+
+  //Хлебные крошки для страницы продуктов, категорий и сущностей категорий.
+  function custom_breabcumb_preprocess_page($vars){
+     $arg0 = arg(0);
+	$arg1 = arg(1);
+	$term_id = arg(2);		
+	if ($arg0 == 'taxonomy' && $arg1 == 'term' && is_numeric($term_id)){          
+	   $term = taxonomy_term_load($term_id);
+	   $parents_all = taxonomy_get_parents_all($term_id);	 
+          if($term->vid == 2 && count($parents_all) == 3){
+ 	  	  $parents = taxonomy_get_parents($term_id);
+		  $transliterated_text = transliteration_get($parents_all[1]->name);
+		  $link_category = str_replace(' ', '-',$transliterated_text);		 
+		  $breadcrumb = array();
+	         $breadcrumb[] = l('Главная', '<front>'); 
+	         $breadcrumb[] = l('Продукты', 'wiki'); 
+	         $breadcrumb[] = l($parents_all[1]->name, 'wiki/'.$link_category); 
+	         drupal_set_breadcrumb($breadcrumb);
+	   }
+    	}
+
+	if($arg0 == 'wiki' && $arg1 == 'ingredients' && is_numeric($term_id)){
+	  	 $term = taxonomy_term_load($term_id);	
+		 $breadcrumb = array();
+	           $breadcrumb[] = l('Главная', '<front>'); 
+	         $breadcrumb[] = l('Продукты', 'wiki'); 
+	        $breadcrumb[] = $term->name;
+	        drupal_set_breadcrumb($breadcrumb);
+	}
+
+  }

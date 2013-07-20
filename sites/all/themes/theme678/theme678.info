@@ -1,0 +1,70 @@
+; $Id: theme678.info,v 1.9 Leo Exp $
+
+; Theme Info -----------------------------------------------------------------
+; required information about the theme
+
+name = theme678
+description = This template is made by <a href="http://template-help.com">template-help.com</a>
+screenshot = screenshot.png
+core = 7.x
+engine = phptemplate
+
+; Stylesheets  ---------------------------------------------------------------
+; We use [screen] instead of [all] to avoid browser styles affecting 
+; other media types. IE stylesheets are loaded through template.php
+
+stylesheets[screen][] = css/boilerplate.css
+stylesheets[screen][] = css/style.css
+stylesheets[screen][] = css/maintenance-page.css
+stylesheets[screen][] = css/receipe.css
+stylesheets[screen][] = css/img_widget_one_button.css
+stylesheets[screen][] = css/msgBoxLight.css
+
+
+scripts[] = js/theme678.core.js
+scripts[] = js/json2.js
+scripts[] = js/jquery.loader.js
+scripts[] = js/jquery.msgBox.js
+scripts[] = js/img_widget_one_button.js
+
+; Regions --------------------------------------------------------------------
+; these content regions are available for block placement
+; some are special hidden regions: page_top, page_bottom, and help
+
+; these are the stock regions
+regions[header] = Header
+regions[menu_left] = Menu left
+regions[menu] = Menu
+regions[user_menu] = User Menu
+regions[help] = Help
+
+regions[content] = Content
+
+regions[sidebar_first] = Sidebar first
+regions[sidebar_second] = Sidebar second
+
+regions[footer] = Footer
+
+regions[page_top] = Page top
+regions[page_bottom] = Page bottom
+regions[highlighted] = Highlighted
+
+; Options --------------------------------------------------------------------
+; these are the checkboxes that are available on the theme settings page.
+
+; additional theme settings
+settings[theme678_feed_icons] = 0
+settings[theme678_clear_registry] = 0
+settings[theme678_tabs_float] = 0
+settings[theme678_tabs_node] = 1
+settings[theme678_breadcrumb_display]   = no
+settings[theme678_breadcrumb_hideonlyfront] = 1
+settings[theme678_breadcrumb_showtitle] = 0
+settings[theme678_breadcrumb_separator] = '»'
+
+; Information added by drupal.org packaging script on 2011-11-10
+version = "7.x-1.0"
+core = "7.x"
+project = "theme678"
+datestamp = "1320946536"
+

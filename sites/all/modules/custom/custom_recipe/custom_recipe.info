@@ -1,0 +1,5 @@
+name = custom recipe
+description = Добавляет табы(коментарии и рецепты) к ноде рецептов.
+package = Custom
+core = 7.x
+version = 7.x-1.x
