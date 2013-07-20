@@ -392,12 +392,12 @@ function theme678_add_like_widjet_in_recipe(&$vars)
 						}
 					 }};
 					 d.documentElement.appendChild(js);
-					}(document,"ok_shareWidget","http://dieta-abc.ru","{width:170,height:30,st:\'rounded\',sz:20,ck:3}");
+					}(document,"ok_shareWidget","http://foodfit.org","{width:170,height:30,st:\'rounded\',sz:20,ck:3}");
 					</script>
 			</div>
 
 			<div class="fb-wrapper">
-					<div class="fb-like" data-href="http://dieta-abc.ru/" data-send="false" data-layout="button_count" data-width="450" data-show-faces="true" data-font="arial"></div>
+					<div class="fb-like" data-href="http://foodfit.org/" data-send="false" data-layout="button_count" data-width="450" data-show-faces="true" data-font="arial"></div>
 			</div>';
 	$vars['content']['like_widjet'] = $like_widjet;
 }
