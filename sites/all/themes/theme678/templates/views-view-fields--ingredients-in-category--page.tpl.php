@@ -25,40 +25,40 @@
  */
 ?>
 <div class="views-ingridient-image">
- <!-- field_image -->
- <?php $field = $fields['field_image']; ?>
- <?php unset($fields['field_image']); ?>
+  <!-- field_image -->
+  <?php $field = $fields['field_image']; ?>
+  <?php unset($fields['field_image']); ?>
 
- <?php print $field->wrapper_prefix; ?>
+  <?php print $field->wrapper_prefix; ?>
   <?php print $field->label_html; ?>
   <?php print $field->content; ?>
- <?php print $field->wrapper_suffix; ?>
+  <?php print $field->wrapper_suffix; ?>
 </div>
 
 <div class="views-ingridient-name">
- <!-- field_name -->
- <?php
- $path = drupal_get_path('module', 'pathauto');
- include_once $path . '/pathauto.inc'; 
- ?>
- <?php $field = $fields['name'];
-	 $transliteration_name =  pathauto_cleanstring($field->content);
-        $term = taxonomy_term_load($fields['tid']->raw);
-        $parent_term = array_shift(taxonomy_get_parents($term->tid));
-	 $parent_name = pathauto_cleanstring($parent_term->name);
- ?>
- <?php unset($fields['name']); ?>
- <a href="<?php print $parent_name."/".$transliteration_name;?>">
- <?php // print $field->wrapper_prefix; ?>
-  <?php // print $field->label_html; ?>
-  <?php print $field->content;?>
- <?php // print $field->wrapper_suffix; ?>
+  <!-- field_name -->
+  <?php
+    $path = drupal_get_path('module', 'pathauto');
+    include_once $path . '/pathauto.inc'; 
+  ?>
+  <?php $field = $fields['name'];
+    $transliteration_name =  pathauto_cleanstring($field->content);
+    $term = taxonomy_term_load($fields['tid']->raw);
+    $parent_term = array_shift(taxonomy_get_parents($term->tid));
+    $parent_name = pathauto_cleanstring($parent_term->name);
+  ?>
+  <?php unset($fields['name']); ?>
+  <a href="/wiki/<?php print $parent_name."/".$transliteration_name;?>">
+    <?php // print $field->wrapper_prefix; ?>
+    <?php // print $field->label_html; ?>
+    <?php print $field->content;?>
+  <?php // print $field->wrapper_suffix; ?>
   </a>
 </div>
 
 <div class="views-ingridient-data">
- <!-- data -->
- <?php if (!empty($fields['description']->content)): ?>
+  <!-- data -->
+  <?php if (!empty($fields['description']->content)): ?>
     <!-- description -->
     <?php $field = $fields['description']; ?>
     <?php unset($fields['description']); ?>
@@ -67,18 +67,17 @@
     <?php print $field->label_html; ?>
     <?php print $field->content; ?>
     <?php print $field->wrapper_suffix; ?>
- <?php else: ?>
+  <?php else: ?>
     <?php foreach ($fields as $id => $field): ?>
-     <?php if (!empty($field->separator)): ?>
-      <?php print $field->separator; ?>
-     <?php endif; ?>
-
-     <?php print $field->wrapper_prefix; ?>
-       <?php print $field->label_html; ?>
-       <?php print $field->content; ?>
+      <?php if (!empty($field->separator)): ?>
+        <?php print $field->separator; ?>
+      <?php endif; ?>
+      <?php print $field->wrapper_prefix; ?>
+     <?php print $field->label_html; ?>
+     <?php print $field->content; ?>
      <?php print $field->wrapper_suffix; ?>
     <?php endforeach; ?>
- <?php endif; ?>
+  <?php endif; ?>
 </div>
 
 <div class="views-ingridient-recipes">
