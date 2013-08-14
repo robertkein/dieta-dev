@@ -19,7 +19,10 @@ a:hover {
   color: #b7b498;
   text-decoration: none;
 }
-
+.clear{
+  float:none;
+  clear:both;
+}
 #page {}
 
 /*** Header ***/

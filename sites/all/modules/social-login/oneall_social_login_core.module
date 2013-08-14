@@ -20,15 +20,32 @@ function oneall_social_login_core_menu() {
   return $items;
 }
 
+
+/**
+ * Returns a list of disabled functions.
+ */
+function oneall_social_get_disabled_functions() {
+  $disabled_functions = trim(ini_get('disable_functions'));
+  if (drupal_strlen($disabled_functions) == 0) {
+    $disabled_functions = array();
+  }
+  else {
+    $disabled_functions = explode(',', $disabled_functions);
+    $disabled_functions = array_map('trim', $disabled_functions);
+  }
+  return $disabled_functions;
+}
+
+
 /**
  * Checks if CURL can be used.
  */
 function oneall_social_login_core_check_curl($protocol = 'https') {
-  if (in_array('curl', get_loaded_extensions())) {
+  if (in_array('curl', get_loaded_extensions()) && function_exists('curl_exec') && !in_array('curl_exec', oneall_social_get_disabled_functions())) {
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_URL, ((drupal_strtolower($protocol) == 'http' ? 'http' : 'https') . '://www.oneall.com/ping.html'));
     curl_setopt($curl, CURLOPT_HEADER, 0);
-    curl_setopt($curl, CURLOPT_TIMEOUT, 15);
+    curl_setopt($curl, CURLOPT_TIMEOUT, 30);
     curl_setopt($curl, CURLOPT_VERBOSE, 0);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
@@ -49,11 +66,13 @@ function oneall_social_login_core_check_curl($protocol = 'https') {
  * Checks if fsockopen can be used.
  */
 function oneall_social_login_core_check_fsockopen($protocol = 'https') {
-  $result = drupal_http_request((drupal_strtolower($protocol) == 'http' ? 'http' : 'https') . '://www.oneall.com/ping.html');
-  if (is_object($result) && property_exists($result, 'code') && $result->code == 200) {
-    if (property_exists($result, 'data')) {
-      if (drupal_strtolower($result->data) == 'ok') {
-        return TRUE;
+  if (function_exists('drupal_http_request') && !in_array('drupal_http_request', oneall_social_get_disabled_functions())) {
+    $result = drupal_http_request((drupal_strtolower($protocol) == 'http' ? 'http' : 'https') . '://www.oneall.com/ping.html');
+    if (is_object($result) && property_exists($result, 'code') && $result->code == 200) {
+      if (property_exists($result, 'data')) {
+        if (drupal_strtolower($result->data) == 'ok') {
+          return TRUE;
+        }
       }
     }
   }
@@ -64,16 +83,16 @@ function oneall_social_login_core_check_fsockopen($protocol = 'https') {
 /**
  * Sends an API request by using the given handler.
  */
-function oneall_social_login_core_do_api_request($handler, $url, $options = array()) {
+function oneall_social_login_core_do_api_request($handler, $url, $options = array(), $timeout = 30) {
   // FSOCKOPEN?
-  if ($handler == 'fsockopen') {
+  if (drupal_strtolower($handler) == 'fsockopen') {
     // BASIC AUTH?
-    if (isset($options['api_key']) && isset($options['api_secret'])) {
+    if (is_array($options) && isset($options['api_key']) && isset($options['api_secret'])) {
       if (preg_match('/^(http(s)?:\/\/)(.+)$/i', $url, $matches)) {
         $url = $matches[1] . $options['api_key'] . ':' . $options['api_secret'] . '@' . $matches[3];
       }
     }
-    $result = drupal_http_request($url);
+    $result = drupal_http_request($url, array('timeout' => $timeout));
     if (is_object($result)) {
       // Done.
       return array(
@@ -89,19 +108,17 @@ function oneall_social_login_core_do_api_request($handler, $url, $options = arra
     curl_setopt($curl, CURLOPT_HEADER, 0);
 
     // BASIC AUTH?
-    if (isset($options['api_key']) && isset($options['api_secret'])) {
+    if (is_array($options) && isset($options['api_key']) && isset($options['api_secret'])) {
       curl_setopt($curl, CURLOPT_USERPWD, $options['api_key'] . ":" . $options['api_secret']);
     }
 
     // Setup CURL options.
-    curl_setopt($curl, CURLOPT_TIMEOUT, 15);
+    curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
     curl_setopt($curl, CURLOPT_VERBOSE, 0);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
     curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
     curl_setopt($curl, CURLOPT_FAILONERROR, 0);
-    curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($curl, CURLOPT_MAXREDIRS, 3);
 
     $http_data = curl_exec($curl);
     $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
@@ -126,10 +143,7 @@ function oneall_social_login_core_callback_handler() {
   $settings = oneall_social_login_core_get_settings();
 
   // No need to do anything if we haven't received these arguments.
-  if (isset($_POST) && !empty($_POST['connection_token']) && !empty($_POST['oa_action']) && in_array($_POST['oa_action'], array(
-    'social_login',
-    'social_link',
-  ))) {
+  if (isset($_POST) && !empty($_POST['connection_token']) && !empty($_POST['oa_action']) && in_array($_POST['oa_action'], array('social_login', 'social_link'))) {
 
     // Clear session.
     oneall_social_login_core_clear_session();
@@ -372,6 +386,17 @@ function oneall_social_login_core_callback_handler() {
                     break;
                 }
 
+                // Setup the default users roles.
+                $user_roles = array(
+                  DRUPAL_AUTHENTICATED_RID => 'authenticated user',
+                );
+
+                // Make sure at least one module implements our hook.
+                if (count(module_implements('oneall_social_login_core_default_user_roles')) > 0) {
+                  // Call modules that implements the hook.
+                  $user_roles = module_invoke_all('oneall_social_login_core_default_user_roles', $user_roles);
+                }
+
                 // Setup the user fields.
                 $user_fields = array(
                   'name' => $user_login,
@@ -379,9 +404,7 @@ function oneall_social_login_core_callback_handler() {
                   'pass' => $user_password,
                   'status' => $user_status,
                   'init' => $user_email,
-                  'roles' => array(
-                    DRUPAL_AUTHENTICATED_RID => 'authenticated user',
-                  ),
+                  'roles' => $user_roles,
                 );
 
                 // Create a new user.

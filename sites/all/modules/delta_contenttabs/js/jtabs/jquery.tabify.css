@@ -1,0 +1,32 @@
+.kdbrandstabs { 
+  padding: 0; 
+  margin:0;
+  clear: both; 
+  border-bottom:1px solid #f1f1f1;
+  overflow: hidden;
+}
+.kdbrandstabs li { 
+  display: inline; 
+}
+.kdbrandstabs li a { 
+  background: #514f54; 
+  padding: 10px 14px; 
+  float:left; 
+  border-right: 1px solid #514f54; 
+  border-bottom: none; 
+  text-decoration: none; 
+  color: #fff;
+  font-size:12px;
+}
+.kdbrandstabs li a:hover,
+.kdbrandstabs li.active a { 
+  background: #129604;
+  color:#ffffff;
+}
+.kdbrandstabcontent { 
+  float: left; 
+  clear: both; 
+  background: #ffffff; 
+  padding: 10px 0px 20px; 
+  width: 570px; 
+}

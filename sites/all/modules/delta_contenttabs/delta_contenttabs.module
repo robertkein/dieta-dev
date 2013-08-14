@@ -1,0 +1,65 @@
+<?php
+/**
+ * Implementation of hook_block_info(). 
+ */
+function delta_contenttabs_block_info() {
+  $blocks['deltacontenttabs'] = array(
+      'info' => t("Content tabs block"),
+      'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implementation of hook_block_view(). 
+ */
+function delta_contenttabs_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'deltacontenttabs':
+      $block['content'] = array(
+        '#theme' => 'deltacontenttabs',
+      );
+      $block['subject'] = t("Today's favorites");
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function delta_contenttabs_theme() {
+  return array(
+      'deltacontenttabs' => array('variables' => array()),
+  );
+}
+
+/**
+ * Theming function for messages.
+ */
+function theme_deltacontenttabs() {
+  drupal_add_css(drupal_get_path('module', 'delta_contenttabs') . '/css/delta_contenttabs.css');
+  drupal_add_js(drupal_get_path('module', 'delta_contenttabs') . '/js/jtabs/jquery.tabify.js');
+  drupal_add_js(drupal_get_path('module', 'delta_contenttabs') . '/js/jtabs/jquery.tabify.init.js');
+  drupal_add_css(drupal_get_path('module', 'delta_contenttabs') . '/js/jtabs/jquery.tabify.css');
+
+  $output = '<div class="content-tabs">';
+  $output .= '<ul id="deltacontenttabs" class="deltacontenttabs">';
+  $output .= '<li class="active"><a href="#recipes" class="active">Рецепты</a></li>';
+  $output .= '<li><a href="#blogs">Блоги</a></li>';
+  $output .= '<li><a href="#articles">Статьи</a></li>';
+  $output .= '</ul>';
+  
+  $output .= '<div class="clear"></div>';
+  $output .= '<div class="tabcontent">';
+  $output .= '<div id="recipes" class="tabcontent">' . views_embed_view('recipes', 'block_tab_recipes') . '</div>';
+  $output .= '<div id="blogs" class="tabcontent">' . views_embed_view('blogs', 'block_tab_blogs') . '</div>';
+  $output .= '<div id="articles" class="tabcontent">' . views_embed_view('articles', 'block_tab_articles') . '</div>';
+  
+  $output .= '</div>';
+  $output .= '</div>';
+  ////
+  $output = '<div class="delta-content-tabs">' . $output . '</div>';
+  return $output;
+}

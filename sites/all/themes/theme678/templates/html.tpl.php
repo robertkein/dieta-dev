@@ -41,7 +41,9 @@ $html_attributes = "lang=\"{$language->language}\" dir=\"{$language->dir}\" {$rd
 <head<?php print $rdf->profile; ?>>
 
   <?php print $head; ?>
- 
+  
+  <!--[if lte IE 7]> <div style=' text-align:center; clear: both; padding:0 0 0 15px; position: relative;'> <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode"><img src="http://storage.ie6countdown.com/assets/100/images/banners/warning_bar_0000_us.jpg" border="0" height="42" width="820" alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today." /></a></div> <![endif]-->
+  
   <title><?php print $head_title; ?></title>
   
   <!--[if LT IE 9]>
@@ -73,6 +75,12 @@ $html_attributes = "lang=\"{$language->language}\" dir=\"{$language->dir}\" {$rd
     s.parentNode.insertBefore(wf, s);
   })(); </script>
 
+<script type="text/javascript" src="//vk.com/js/api/openapi.js?95"></script>
+<script type="text/javascript">
+  VK.init({apiId: 3777395, onlyWidgets: true});
+</script>
+
+
 <div id="fb-root"></div>
 <script>(function(d, s, id) {
   var js, fjs = d.getElementsByTagName(s)[0];
@@ -84,8 +92,9 @@ $html_attributes = "lang=\"{$language->language}\" dir=\"{$language->dir}\" {$rd
 
 
 <script type="text/javascript" src="//vk.com/js/api/openapi.js?96"></script>
+
 <script type="text/javascript">
-  VK.init({apiId: 3777395, onlyWidgets: true});
+  VK.init({apiId: 3650178, onlyWidgets: true});
 </script>
 
 </head>

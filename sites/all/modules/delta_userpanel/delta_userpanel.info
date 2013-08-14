@@ -1,0 +1,6 @@
+name = User Login Panel
+description = Панель входа на сайт
+package = Custom
+version = "7.x-1.x"
+core = "7.x"
+

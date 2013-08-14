@@ -1,0 +1,89 @@
+.header-top{
+  position:relative;
+  height:38px;
+}
+
+.header-top .block-delta-userpanel{
+  position:fixed;
+  width:100%;
+  background:#fffff2;
+  border-bottom: 1px solid #C1C1C1;
+  z-index:499;
+}
+
+.header-top .delta-user-panel{
+  padding: 5px 0px;
+  width: 950px;
+  margin:0 auto;
+  overflow:hidden;
+}
+
+.header-top .delta-user-panel .form-item,
+.header-top .delta-user-panel .form-actions{
+  margin:0 30px 0 0;
+  padding:0;
+}
+
+.header-top .delta-user-panel .item-list{
+  float:right !important;
+}
+
+.delta-user-panel label {
+}
+
+.delta-user-panel input {
+
+}
+
+.delta-user-panel span.form-required {
+  display: none;
+}
+
+.delta-user-panel div.item-list ul{
+  margin:3px 0 0;
+}
+
+.delta-user-panel div.item-list ul.welcome-box{
+  margin-top: 0;
+  float: right;
+}
+
+.delta-user-panel input.form-submit {
+  padding:5px 10px;
+  border-radius:3px;
+}
+
+.delta-user-panel div.item-list ul li {
+  list-style:none;
+  display:inline;
+  margin:0 10px 0 0;
+  padding:0;
+}
+
+.delta-user-panel p.user-info {
+  float: left;
+  margin: 0;
+}
+
+.delta-user-panel > form#user-login-form > div > div{
+  float: left;
+}
+
+.delta-user-panel > form#user-login-form > div > div.form-type-textfield{
+  
+}
+
+.delta-user-panel > form#user-login-form > div > div.form-type-textfield label,
+.delta-user-panel > form#user-login-form > div > div.form-type-textfield .form-text{
+  display:inline-block;
+}
+
+.delta-user-panel > form#user-login-form > div > div.form-type-password label,
+.delta-user-panel > form#user-login-form > div > div.form-type-password .form-text{
+  display:inline-block;
+}
+
+.delta-user-panel > form#user-login-form > div > div.form-type-textfield .form-text,
+.delta-user-panel > form#user-login-form > div > div.form-type-password .form-text{
+  background:#f1f1f1;
+}

@@ -1,0 +1,6 @@
+name = Content Tabs
+description = Блок вывода контента с табами. Контент формируется в вьюсах.
+package = Custom
+version = "7.x-1.x"
+core = "7.x"
+

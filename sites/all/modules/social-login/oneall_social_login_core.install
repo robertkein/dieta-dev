@@ -17,14 +17,12 @@ function oneall_social_login_core_schema() {
       'oasliid' => array(
         'description' => 'The primary key of this table.',
         'type' => 'serial',
-        'length' => 10,
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
       'aid' => array(
         'description' => 'Foreign key to link entries of this table to entries in the authmap table.',
         'type' => 'int',
-        'length' => 10,
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
@@ -69,7 +67,6 @@ function oneall_social_login_core_schema() {
       'oaslsid' => array(
         'description' => 'The primary key of this table.',
         'type' => 'serial',
-        'length' => 10,
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
