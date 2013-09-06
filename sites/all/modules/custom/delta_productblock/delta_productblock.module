@@ -1,0 +1,74 @@
+<?php
+/**
+ * Implementation of hook_block_info(). 
+ */
+function delta_productblock_block_info() {
+  $blocks['deltacontenttabs'] = array(
+      'info' => t("Content tabs block"),
+      'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implementation of hook_block_view(). 
+ */
+function delta_productblock_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'deltacontenttabs':
+      $block['content'] = array(
+        '#theme' => 'deltacontenttabs',
+      );
+      $block['subject'] = t("Today's favorites");
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function delta_productblock_theme() {
+  return array(
+      'deltacontentproduct' => array('variables' => array()),
+  );
+}
+
+/**
+ * Theming function for messages.
+ */
+function theme_deltacontentproduct() {
+  drupal_add_css(drupal_get_path('module', 'delta_contenttabs') . '/css/delta_productblock.css');
+
+  // get taxonomy terms
+  $terms = _delta_productblock_gettags(10);
+
+  $output = '<div class="content-productblock">';
+  $output = '<div class="content-productblock-inner">' . $terms . '</div>';
+  $output .= '</div>';
+  return $output;
+}
+
+function _delta_productblock_gettags($limit = 10){
+  $getVocabId = db_query('SELECT tv.vid as tvid FROM {taxonomy_vocabulary} tv WHERE tv.machine_name = "products" LIMIT 1')->fetchObject();
+  $vocabId = $getVocabId->tvid;
+
+
+  $query = db_select('taxonomy_term_data', 'ttd');
+  $query->innerJoin('taxonomy_term_hierarchy', 'tti', 'tti.tid = ttd.tid');
+  $query->fields('ttd', array('tid', 'name'));
+  $query->condition('tti.parent', '1', '>');
+  $query->condition('ttd.vid', $vocabId);
+  $query = $query->orderBy('ttd.name', 'ASC')->range(0, $limit);
+  $terms = $query->execute();
+  
+  $content = '';
+  foreach($terms as $term){
+    $content .= '<div class="content-productblock-item" style="display:none">';
+    $content .= '<div class="content-productblock-item-link">' . $term->name . '</div>';
+	$content .= '</div>';
+  }
+
+  return $content;
+}

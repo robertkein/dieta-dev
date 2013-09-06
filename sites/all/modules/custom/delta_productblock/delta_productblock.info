@@ -1,0 +1,6 @@
+name = Content Products Block
+description = Блок вывода продуктов.
+package = Custom
+version = "7.x-1.x"
+core = "7.x"
+
