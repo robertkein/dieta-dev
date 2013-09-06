@@ -3,8 +3,8 @@
  * Implementation of hook_block_info(). 
  */
 function delta_productblock_block_info() {
-  $blocks['deltacontenttabs'] = array(
-      'info' => t("Content tabs block"),
+  $blocks['deltaproductblock'] = array(
+      'info' => t("Content product block"),
       'cache' => DRUPAL_NO_CACHE,
   );
   return $blocks;
@@ -16,11 +16,11 @@ function delta_productblock_block_info() {
 function delta_productblock_block_view($delta = '') {
   $block = array();
   switch ($delta) {
-    case 'deltacontenttabs':
+    case 'deltaproductblock':
       $block['content'] = array(
-        '#theme' => 'deltacontenttabs',
+        '#theme' => 'deltacontentproduct',
       );
-      $block['subject'] = t("Today's favorites");
+      //$block['subject'] = t("");
       break;
   }
   return $block;
@@ -39,10 +39,10 @@ function delta_productblock_theme() {
  * Theming function for messages.
  */
 function theme_deltacontentproduct() {
-  drupal_add_css(drupal_get_path('module', 'delta_contenttabs') . '/css/delta_productblock.css');
+  drupal_add_css(drupal_get_path('module', 'delta_productblock') . '/css/delta_productblock.css');
 
   // get taxonomy terms
-  $terms = _delta_productblock_gettags(10);
+  $terms = _delta_productblock_getcontent(10);
 
   $output = '<div class="content-productblock">';
   $output = '<div class="content-productblock-inner">' . $terms . '</div>';
@@ -50,7 +50,7 @@ function theme_deltacontentproduct() {
   return $output;
 }
 
-function _delta_productblock_gettags($limit = 10){
+function _delta_productblock_getcontent($limit = 10){ 
   $getVocabId = db_query('SELECT tv.vid as tvid FROM {taxonomy_vocabulary} tv WHERE tv.machine_name = "products" LIMIT 1')->fetchObject();
   $vocabId = $getVocabId->tvid;
 
