@@ -20,7 +20,7 @@ function delta_productblock_block_view($delta = '') {
       $block['content'] = array(
         '#theme' => 'deltacontentproduct',
       );
-      //$block['subject'] = t("");
+      $block['subject'] = t('Полезный продукт');
       break;
   }
   return $block;
@@ -31,7 +31,7 @@ function delta_productblock_block_view($delta = '') {
  */
 function delta_productblock_theme() {
   return array(
-      'deltacontentproduct' => array('variables' => array()),
+    'deltacontentproduct' => array('variables' => array()),
   );
 }
 
@@ -40,35 +40,86 @@ function delta_productblock_theme() {
  */
 function theme_deltacontentproduct() {
   drupal_add_css(drupal_get_path('module', 'delta_productblock') . '/css/delta_productblock.css');
-
-  // get taxonomy terms
-  //$terms = _delta_productblock_getcontent(10);
+  drupal_add_js(drupal_get_path('module', 'delta_productblock') . '/js/jquery.productblock.init.js');
+  //get taxonomy terms
+  $terms = _delta_productblock_getcontent(10);
 
   $output = '<div class="content-productblock">';
-  //$output = '<div class="content-productblock-inner">' . $terms . '</div>';
+  $output .= '<div class="content-productblock-inner">' . $terms . '</div>';
   $output .= '</div>';
   return $output;
 }
 
 function _delta_productblock_getcontent($limit = 10){ 
-  /*$getVocabId = db_query('SELECT tv.vid as tvid FROM {taxonomy_vocabulary} tv WHERE tv.machine_name = "products" LIMIT 1')->fetchObject();
-  $vocabId = $getVocabId->tvid;
+  $vocabId = 2;
 
 
   $query = db_select('taxonomy_term_data', 'ttd');
   $query->innerJoin('taxonomy_term_hierarchy', 'tti', 'tti.tid = ttd.tid');
-  $query->fields('ttd', array('tid', 'name'));
-  $query->condition('tti.parent', '1', '>');
+  $query->fields('ttd', array('tid', 'name', 'description'));
+  $query->condition('tti.parent', '0', '>');
   $query->condition('ttd.vid', $vocabId);
-  $query = $query->orderBy('ttd.name', 'ASC')->range(0, $limit);
+  $query = $query->orderRandom()->range(0, $limit);
+  //$query = $query->orderBy('ttd.name', 'ASC')->range(0, $limit);
   $terms = $query->execute();
   
   $content = '';
+  $cCount = 0;
   foreach($terms as $term){
-    $content .= '<div class="content-productblock-item" style="display:none">';
+    if($cCount == 0){
+      $cClass = "content-productblock-item-show";
+    }
+    else {
+      $cClass = "content-productblock-item-hide";
+    }
+	
+	// get image
+    $getImage = db_query("SELECT b.*, b.field_image_fid AS fid, b.field_image_width AS width, b.field_image_height AS height 
+	  FROM {field_data_field_image} b
+	  WHERE b.entity_type = 'taxonomy_term' AND b.entity_id = " . $term->tid . " ORDER BY b.delta ASC LIMIT 1")->fetchObject();
+      $imageClassLast = '';
+      $imageDataUri = file_load($getImage->fid)->uri;
+
+      $imageDestination = theme_image_style(array(
+        'style_name' => 'productblockimage',
+        'path' => $imageDataUri,
+        'alt' =>  $term->name,
+        'width' => '',
+        'height' => '',
+        'attributes' => array('class' => ''),
+      ));
+	
+    $content .= '<div class="content-productblock-item content-productblock-item-' . $cCount . ' ' . $cClass . '">';
+    $content .= '<a href="#" title="' .  $term->name . '">';
+    if(isset($term->description)){
+      $content .= '<div class="content-productblock-item-description">' . truncate_utf8(strip_tags($term->description), 200, TRUE, TRUE, 200) . '</div>';
+    }
+    $content .= '<div class="content-productblock-item-image">' . $imageDestination . '</div>';
     $content .= '<div class="content-productblock-item-link">' . $term->name . '</div>';
+	$content .= '</a>';
 	$content .= '</div>';
+	
+    $cCount++;
   }
 
-  return $content;*/
+  return $content;
+}
+
+function delta_productblock_image_default_styles() {
+  $styles = array();
+
+  $styles['productblockimage'] = array(
+    'effects' => array(
+      array(
+        'name' => 'image_scale_and_crop',
+        'data' => array(
+          'width' => 210,
+          'height' => 210,
+          'upscale' => 1,
+        ),
+        'weight' => 0,
+      ),
+    ),
+  );
+  return $styles;
 }
