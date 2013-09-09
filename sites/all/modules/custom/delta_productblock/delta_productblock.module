@@ -42,16 +42,16 @@ function theme_deltacontentproduct() {
   drupal_add_css(drupal_get_path('module', 'delta_productblock') . '/css/delta_productblock.css');
 
   // get taxonomy terms
-  $terms = _delta_productblock_getcontent(10);
+  //$terms = _delta_productblock_getcontent(10);
 
   $output = '<div class="content-productblock">';
-  $output = '<div class="content-productblock-inner">' . $terms . '</div>';
+  //$output = '<div class="content-productblock-inner">' . $terms . '</div>';
   $output .= '</div>';
   return $output;
 }
 
 function _delta_productblock_getcontent($limit = 10){ 
-  $getVocabId = db_query('SELECT tv.vid as tvid FROM {taxonomy_vocabulary} tv WHERE tv.machine_name = "products" LIMIT 1')->fetchObject();
+  /*$getVocabId = db_query('SELECT tv.vid as tvid FROM {taxonomy_vocabulary} tv WHERE tv.machine_name = "products" LIMIT 1')->fetchObject();
   $vocabId = $getVocabId->tvid;
 
 
@@ -70,5 +70,5 @@ function _delta_productblock_getcontent($limit = 10){
 	$content .= '</div>';
   }
 
-  return $content;
+  return $content;*/
 }
