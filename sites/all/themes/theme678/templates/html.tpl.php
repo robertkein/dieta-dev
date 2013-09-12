@@ -75,11 +75,6 @@ $html_attributes = "lang=\"{$language->language}\" dir=\"{$language->dir}\" {$rd
     s.parentNode.insertBefore(wf, s);
   })(); </script>
 
-<script type="text/javascript" src="//vk.com/js/api/openapi.js?95"></script>
-<script type="text/javascript">
-  VK.init({apiId: 3777395, onlyWidgets: true});
-</script>
-
 
 <div id="fb-root"></div>
 <script>(function(d, s, id) {
@@ -92,9 +87,8 @@ $html_attributes = "lang=\"{$language->language}\" dir=\"{$language->dir}\" {$rd
 
 
 <script type="text/javascript" src="//vk.com/js/api/openapi.js?96"></script>
-
 <script type="text/javascript">
-  VK.init({apiId: 3650178, onlyWidgets: true});
+  VK.init({apiId: 3777395, onlyWidgets: true});
 </script>
 
 </head>

@@ -3,6 +3,11 @@
 yandex_metrics 7.x-1.x, xxxx-xx-xx
 
 
+yandex_metrics 7.x-1.6, 2013-07-08
+#1912764 by konstantin.komelin: Fixed reason of strict warning: Only variables should be passed by reference.
+#1561192 by konstantin.komelin, duozersk | info999: Fixed incompatibility with Overlay.
+
+
 yandex_metrics 7.x-1.5, 2013-02-20
 by konstantin.komelin: Some improvements.
 

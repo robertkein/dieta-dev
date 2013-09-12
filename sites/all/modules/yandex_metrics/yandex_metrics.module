@@ -323,8 +323,10 @@ function yandex_metrics_report($filter = 'week') {
   drupal_add_css(drupal_get_path('module', 'yandex_metrics') . '/css/yandex_metrics.css');
   
   $output = '';
-  
-  $output .= drupal_render(drupal_get_form('yandex_metrics_filter_form'));
+
+  $form = drupal_get_form('yandex_metrics_filter_form');
+
+  $output .= drupal_render($form);
   
   $use_ajax = variable_get('yandex_metrics_use_ajax', FALSE);
   if ($use_ajax) {
@@ -750,9 +752,20 @@ function yandex_metrics_authorization_submit($form, &$form_state) {
     return;
   }
 
-  $request_url = "https://oauth.yandex.ru/authorize?response_type=code&client_id=" . $client_id;
+  $request_url = 'https://oauth.yandex.ru/authorize';
+  $params = array(
+    'response_type' => 'code',
+    'client_id' => $client_id,
+  );
 
-  drupal_goto($request_url);
+  // Check for the overlay.
+  if (module_exists('overlay') && overlay_get_mode() == 'child') {
+    overlay_close_dialog($request_url, array('query' => $params, 'external' => TRUE));
+    overlay_deliver_empty_page();
+  }
+  else {
+    drupal_goto($request_url, array('query' => $params));
+  }
 }
 
 /**
