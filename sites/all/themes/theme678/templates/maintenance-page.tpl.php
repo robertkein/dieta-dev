@@ -43,16 +43,16 @@ $html_attributes = "lang=\"{$language->language}\" dir=\"{$language->dir}\" {$rd
       <header id="header" role="banner">
         <div class="section clearfix">
           <?php if ($site_name || $site_slogan): ?>
-            <div id="name-and-slogan"<?php if ($hide_site_name && $hide_site_slogan) { print ' class="element-invisible"'; } ?>>
+            <div id="name-and-slogan"<?php if (isset($hide_site_name) && isset($hide_site_slogan)) { print ' class="element-invisible"'; } ?>>
               <?php if ($site_name): ?>
-                <div id="site-name"<?php if ($hide_site_name) { print ' class="element-invisible"'; } ?>>
+                <div id="site-name"<?php if (isset($hide_site_name)) { print ' class="element-invisible"'; } ?>>
                   <strong>
                     <a href="<?php print $front_page; ?>" title="<?php print t('Home'); ?>" rel="home"><span><?php print $site_name; ?></span></a>
                   </strong>
                 </div>
               <?php endif; ?>
               <?php if ($site_slogan): ?>
-                <div id="site-slogan"<?php if ($hide_site_slogan) { print ' class="element-invisible"'; } ?>>
+                <div id="site-slogan"<?php if (isset($hide_site_name)) { print ' class="element-invisible"'; } ?>>
                   <?php print $site_slogan; ?>
                 </div>
               <?php endif; ?>
