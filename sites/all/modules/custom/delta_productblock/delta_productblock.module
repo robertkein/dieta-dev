@@ -51,8 +51,10 @@ function theme_deltacontentproduct() {
 }
 
 function _delta_productblock_getcontent($limit = 10){ 
+  $path = drupal_get_path('module', 'pathauto');
+  include_once $path . '/pathauto.inc';
+ 
   $vocabId = 2;
-
 
   $query = db_select('taxonomy_term_data', 'ttd');
   $query->innerJoin('taxonomy_term_hierarchy', 'tti', 'tti.tid = ttd.tid');
@@ -77,20 +79,25 @@ function _delta_productblock_getcontent($limit = 10){
     $getImage = db_query("SELECT b.*, b.field_image_fid AS fid, b.field_image_width AS width, b.field_image_height AS height 
 	  FROM {field_data_field_image} b
 	  WHERE b.entity_type = 'taxonomy_term' AND b.entity_id = " . $term->tid . " ORDER BY b.delta ASC LIMIT 1")->fetchObject();
-      $imageClassLast = '';
-      $imageDataUri = file_load($getImage->fid)->uri;
+    $imageClassLast = '';
+    $imageDataUri = file_load($getImage->fid)->uri;
 
-      $imageDestination = theme_image_style(array(
-        'style_name' => 'productblockimage',
-        'path' => $imageDataUri,
-        'alt' =>  $term->name,
-        'width' => '',
-        'height' => '',
-        'attributes' => array('class' => ''),
-      ));
+    $imageDestination = theme_image_style(array(
+      'style_name' => 'productblockimage',
+      'path' => $imageDataUri,
+      'alt' =>  $term->name,
+      'width' => '',
+      'height' => '',
+      'attributes' => array('class' => ''),
+    ));
 	
+    $parent_term = array_shift(taxonomy_get_parents($term->tid));
+    $transliteration_term = pathauto_cleanstring($term->name);
+    $transliteration_parent_term = pathauto_cleanstring($parent_term->name);
+    $termalias = "wiki/" . $transliteration_parent_term . "/" . $transliteration_term;
+
     $content .= '<div class="content-productblock-item content-productblock-item-' . $cCount . ' ' . $cClass . '">';
-    $content .= '<a href="#" title="' .  $term->name . '">';
+    $content .= '<a href="' . url($termalias) . '" title="' .  $term->name . '">';
     if(isset($term->description)){
       $content .= '<div class="content-productblock-item-description">' . truncate_utf8(strip_tags($term->description), 200, TRUE, TRUE, 200) . '</div>';
     }
